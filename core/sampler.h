@@ -13,24 +13,26 @@ public:
 		gamma_distribution<double> distribution(a, 1.0 / b);
 		return distribution(rand_gen);
 	}
-
 	static double beta(double a, double b){
 		double ga = gamma(a, 1.0);
 		double gb = gamma(b, 1.0);
 		return ga / (ga + gb);
 	}
-
+	static double normal(double mean, double stddev){
+		normal_distribution<double> distribution(mean, stddev);
+		return distribution(mt);
+	}
 	static double bernoulli(double p){
-		uniform_real_distribution<double> rand(0, 1);
-		double r = rand(mt);
+		uniform_real_distribution<double> distribution(0, 1);
+		double r = distribution(mt);
 		if(r > p){
 			return 0;
 		}
 		return 1;
 	}
 	static double uniform(double min = 0, double max = 0){
-		uniform_real_distribution<double> rand(min, max);
-		return rand(mt);
+		uniform_real_distribution<double> distribution(min, max);
+		return distribution(mt);
 	}
 };
 
