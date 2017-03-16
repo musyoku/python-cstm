@@ -13,7 +13,7 @@ using namespace std;
 class CSTM{
 public:
 	vector<unordered_map<id, int>> _n_k;		// 文書ごとの単語の出現頻度
-	vector<double> _sum_n_k;					// 文書ごとの単語の出現頻度の総和
+	vector<int> _sum_n_k;						// 文書ごとの単語の出現頻度の総和
 	unordered_map<id, double> _g0;				// 単語のデフォルト確率
 	unordered_map<id, double*> _word_vectors;	// 単語ベクトル
 	vector<double*> _doc_vectors;				// 文書ベクトル
@@ -136,18 +136,20 @@ public:
 		}
 		return sum;
 	}
-	double compute_Pw_given_doc(int doc_id){
+	double compute_log_Pdataset_given_doc(vector<vector<id>> &dataset, int doc_id){
 		assert(doc_id < _n_k.size());
 		double log_pw = 0;
 		double sum_alpha = sum_alpha_doc(doc_id);
 		double sum_word_frequency = get_sum_word_frequency_of_doc(doc_id);
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
-		unordered_map<id, int> &count = _n_k[doc_id];
-		for(const auto &elem: count){
-			id word_id = elem.first;
-			double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
-			int n_k = elem.second;
-			log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+		for(int data_index = 0;data_index < dataset.size();data_index++){
+			vector<id> &word_ids = dataset[data_index];
+			for(int i = 0 ;i < word_ids.size();i++){
+				id word_id = word_ids[i];
+				double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+				int n_k = get_word_count_in_doc(word_id, doc_id);
+				log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+			}
 		}
 		return log_pw;
 	}
@@ -161,6 +163,16 @@ public:
 		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI) * sigma));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= (new_vec[i] - old_vec[i]) * (new_vec[i] - old_vec[i]) / (2.0 * sigma * sigma);		
+		}
+		return log_pvec;
+	}
+	double compute_log_prior_Pvec(double* vec){
+		return _compute_log_prior_Pvec(vec);
+	}
+	double _compute_log_prior_Pvec(double* new_vec){
+		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI)));
+		for(int i = 0;i < _ndim_d;i++){
+			log_pvec -= new_vec[i] * new_vec[i] * 0.5;
 		}
 		return log_pvec;
 	}
@@ -180,6 +192,13 @@ public:
 	double* get_word_vec(id word_id){
 		auto itr = _word_vectors.find(word_id);
 		assert(itr != _word_vectors.end());
+		return itr->second;
+	}
+	int get_word_count_in_doc(id word_id, int doc_id){
+		assert(doc_id < _n_k.size());
+		unordered_map<id, int> &count = _n_k[doc_id];
+		auto itr = count.find(word_id);
+		assert(itr != count.end());
 		return itr->second;
 	}
 	void set_word_vector(id word_id, double* source){

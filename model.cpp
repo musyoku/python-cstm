@@ -42,8 +42,10 @@ class PyCSTM{
 public:
 	CSTM* _cstm;
 	Vocab* _vocab;
-	unordered_map<int, vector<vector<id>>> _dataset_train;
-	unordered_map<int, vector<vector<id>>> _dataset_test;
+	vector<vector<vector<id>>> _dataset_train;
+	vector<vector<vector<id>>> _dataset_test;
+	vector<int> _sum_word_frequency_train;
+	vector<int> _sum_word_frequency_test;
 	id* _word_ids;		// サンプリング用
 	bool _is_ready;
 	PyCSTM(){
@@ -74,12 +76,30 @@ public:
 			_word_ids[index] = word_id;
 			index += 1;
 		}
+		assert(_sum_word_frequency_train.size() == _sum_word_frequency_test.size());
+		assert(_sum_word_frequency_test.size() == _dataset_test.size());
+		assert(_dataset_test.size() == _dataset_train.size());
+		for(int i = 0;i < _sum_word_frequency_train.size();i++){
+			cout << _sum_word_frequency_train[i] << ", ";
+		}
+		cout << endl;
+		for(int i = 0;i < _sum_word_frequency_test.size();i++){
+			cout << _sum_word_frequency_test[i] << ", ";
+		}
+		cout << endl;
 		_is_ready = true;
 	}
 	int add_document(string filename, int train_split){
 		wifstream ifs(filename.c_str());
 		assert(ifs.fail() == false);
+		// 文書の追加
 		int doc_id = _cstm->add_document();
+		vector<vector<id>> dataset;
+		_dataset_train.push_back(dataset);
+		_dataset_test.push_back(dataset);
+		_sum_word_frequency_train.push_back(0);
+		_sum_word_frequency_test.push_back(0);
+		// ファイルの読み込み
 		wstring sentence;
 		vector<wstring> sentences;
 		while (getline(ifs, sentence) && !sentence.empty()){
@@ -94,49 +114,59 @@ public:
 		shuffle(rand_indices.begin(), rand_indices.end(), Sampler::mt);	// データをシャッフル
 		for(int i = 0;i < rand_indices.size();i++){
 			wstring &sentence = sentences[rand_indices[i]];
+			vector<wstring> words;
+			split_word_by(sentence, L' ', words);	// スペースで分割
 			if(i < train_split){
-				add_train_sentence_to_doc(sentence, doc_id);
+				add_train_sentence_to_doc(words, doc_id);
 			}else{
-				add_test_sentence_to_doc(sentence, doc_id);
+				add_test_sentence_to_doc(words, doc_id);
 			}
 		}
 		return doc_id;
 	}
-	void add_train_sentence_to_doc(wstring &sentence, int doc_id){
-		auto itr = _dataset_train.find(doc_id);
-		if(itr == _dataset_train.end()){
-			vector<vector<id>> dataset;
-			_dataset_train[doc_id] = dataset;
-			itr = _dataset_train.find(doc_id);
-		}
-		vector<vector<id>> &dataset = itr->second;
-		_add_sentence_to(sentence, dataset, doc_id);
+	void add_train_sentence_to_doc(vector<wstring> &words, int doc_id){
+		assert(doc_id < _dataset_train.size());
+		vector<vector<id>> &dataset = _dataset_train[doc_id];
+		_sum_word_frequency_train[doc_id] += words.size();
+		_add_sentence_to(words, dataset, doc_id);
 	}
-	void add_test_sentence_to_doc(wstring &sentence, int doc_id){
-		auto itr = _dataset_test.find(doc_id);
-		if(itr == _dataset_test.end()){
-			vector<vector<id>> dataset;
-			_dataset_test[doc_id] = dataset;
-			itr = _dataset_test.find(doc_id);
-		}
-		vector<vector<id>> &dataset = itr->second;
-		_add_sentence_to(sentence, dataset, doc_id);
+	void add_test_sentence_to_doc(vector<wstring> &words, int doc_id){
+		assert(doc_id < _dataset_test.size());
+		vector<vector<id>> &dataset = _dataset_test[doc_id];
+		_sum_word_frequency_test[doc_id] += words.size();
+		_add_sentence_to(words, dataset, doc_id);
 	}
-	void _add_sentence_to(wstring &sentence, vector<vector<id>> &dataset, int doc_id){
-		vector<wstring> words;
-		split_word_by(sentence, L' ', words);	// スペースで分割
+	void _add_sentence_to(vector<wstring> &words, vector<vector<id>> &dataset, int doc_id){
 		if(words.size() > 0){
-			vector<id> tokens;
+			vector<id> word_ids;
 			for(auto word: words){
 				if(word.size() == 0){
 					continue;
 				}
-				id token_id = _vocab->add_string(word);
-				tokens.push_back(token_id);
-				_cstm->add_word(token_id, doc_id);
+				id word_id = _vocab->add_string(word);
+				word_ids.push_back(word_id);
+				_cstm->add_word(word_id, doc_id);
 			}
-			dataset.push_back(tokens);
+			dataset.push_back(word_ids);
 		}
+	}
+	double compute_perplexity_train(){
+		double log_pw = 0;
+		int n = 0;
+		for(int doc_id = 0;doc_id < _dataset_train.size();doc_id++){
+			vector<vector<id>> &dataset = _dataset_train[doc_id];
+			log_pw += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id) / (double)_sum_word_frequency_train[doc_id];
+		}
+		return exp(-log_pw / (double)_dataset_train.size());
+	}
+	double compute_perplexity_test(){
+		double log_pw = 0;
+		int n = 0;
+		for(int doc_id = 0;doc_id < _dataset_test.size();doc_id++){
+			vector<vector<id>> &dataset = _dataset_test[doc_id];
+			log_pw += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id) / (double)_sum_word_frequency_test[doc_id];
+		}
+		return exp(-log_pw / (double)_dataset_test.size());
 	}
 	void perform_mh_sampling_word(){
 		assert(_is_ready);
@@ -155,17 +185,27 @@ public:
 		assert(docs.size() > 0);
 		double log_pw_old = 0;
 		for(const int doc_id: docs){
-			log_pw_old += _cstm->compute_Pw_given_doc(doc_id);
+			vector<vector<id>> &dataset = _dataset_train[doc_id];
+			log_pw_old += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
 		}
 		_cstm->set_word_vector(word_id, new_vec);
 		double log_pw_new = 0;
 		for(const int doc_id: docs){
-			log_pw_new += _cstm->compute_Pw_given_doc(doc_id);
+			vector<vector<id>> &dataset = _dataset_train[doc_id];
+			log_pw_new += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
 		}
 		double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
 		double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
+		double log_prior_old = _cstm->compute_log_prior_Pvec(old_vec);
+		double log_prior_new = _cstm->compute_log_prior_Pvec(new_vec);
 		double log_adoption_rate = log_pw_new + log_t_given_new - log_pw_old - log_t_given_old;
+		// double log_adoption_rate = log_pw_new - log_pw_old;
 		double adoption_rate = std::min(1.0, exp(log_adoption_rate));
+
+		// if(adoption_rate < 1){
+		// 	return false;
+		// }
+		// return true;
 		double bernoulli = Sampler::uniform(0, 1);
 		if(bernoulli <= adoption_rate){
 			return true;
@@ -184,14 +224,22 @@ public:
 		}
 	}
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
-		double log_pw_old = _cstm->compute_Pw_given_doc(doc_id);
+		vector<vector<id>> &dataset = _dataset_train[doc_id];
+		double log_pw_old = _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
 		_cstm->set_doc_vector(doc_id, new_vec);
-		double log_pw_new = _cstm->compute_Pw_given_doc(doc_id);
+		double log_pw_new = _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
 		double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
 		double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
+		double log_prior_old = _cstm->compute_log_prior_Pvec(old_vec);
+		double log_prior_new = _cstm->compute_log_prior_Pvec(new_vec);
 		double log_adoption_rate = log_pw_new + log_t_given_new - log_pw_old - log_t_given_old;
+		// double log_adoption_rate = log_pw_new - log_pw_old;
 		double adoption_rate = std::min(1.0, exp(log_adoption_rate));
 		double bernoulli = Sampler::uniform(0, 1);
+		// if(adoption_rate < 1){
+		// 	return false;
+		// }
+		// return true;
 		if(bernoulli <= adoption_rate){
 			return true;
 		}
