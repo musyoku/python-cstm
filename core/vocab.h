@@ -11,9 +11,7 @@
 #include <string>
 #include <vector>
 #include <fstream>
-#include "c_printf.h"
 #include "common.h"
-
 using namespace std;
 
 class Vocab{
