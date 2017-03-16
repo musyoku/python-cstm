@@ -1,5 +1,7 @@
 #ifndef _common_
 #define _common_
+#include <iostream>
+using namespace std;
 
 #define NDIM_D 		2		// 文書・単語ベクトルの次元数
 #define SIGMA_U 	0.01	// 文書ベクトルのランダムウォーク幅
@@ -19,4 +21,12 @@ namespace std{
 		return dot;
 	}
 }
+void dump_vec(double* vec, int len){
+	cout << "[";
+	for(int i = 0;i < len - 1;i++){
+		cout << vec[i] << ", ";
+	}
+	cout << vec[len - 1] << "]" << endl;
+}
+
 #endif
