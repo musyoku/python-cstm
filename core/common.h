@@ -10,11 +10,13 @@ using id = size_t;
 #define ID_BOS 0
 #define ID_EOS 1
 
-double dot(double* a, double* b, int length){
-	double dot = 0;
-	for(int i = 0;i < length;i++){
-		dot += a[i] * b[i];
+namespace std{
+	double dot(double* a, double* b, int length){
+		double dot = 0;
+		for(int i = 0;i < length;i++){
+			dot += a[i] * b[i];
+		}
+		return dot;
 	}
-	return dot;
 }
 #endif

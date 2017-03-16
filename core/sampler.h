@@ -34,6 +34,10 @@ public:
 		uniform_real_distribution<double> distribution(min, max);
 		return distribution(mt);
 	}
+	static double uniform_int(int min = 0, int max = 0){
+		uniform_int_distribution<> rand(min, max);
+		return rand(mt);
+	}
 };
 
 int seed = chrono::system_clock::now().time_since_epoch().count();

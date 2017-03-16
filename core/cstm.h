@@ -3,9 +3,11 @@
 #include <unordered_map>
 #include <vector>
 #include <cassert>
+#include <cmath>
 #include "common.h"
 #include "sampler.h"
 using namespace std;
+#define PI 3.14159265358979323846
 
 class CSTM{
 public:
@@ -32,9 +34,10 @@ public:
 		for(auto &elem: _word_vectors){
 			delete[] elem.second;
 		}
-		for(auto &elem: _word_vectors){
-			delete[] elem.second;
+		for(auto vec: _doc_vectors){
+			delete[] vec;
 		}
+		delete[] _tmp_vec;
 	}
 	void compile(){
 		for(const auto &elem: _word_vectors){
@@ -108,7 +111,7 @@ public:
 		assert(doc_id < _doc_vectors.size());
 		double* word_vec = itr->second;
 		double* doc_vec = _doc_vectors[doc_id];
-		double f = dot(word_vec, doc_vec, _ndim_d);
+		double f = std::dot(word_vec, doc_vec, _ndim_d);
 		double g0 = get_g0_for_word(word_id);
 		return _alpha0 * g0 * exp(f);
 	}
@@ -137,6 +140,19 @@ public:
 		}
 		return log_pw;
 	}
+	double compute_log_Pvec_doc(double* new_vec, double* old_vec){
+		return _compute_log_Pvec_given_sigma(new_vec, old_vec, _sigma_u);
+	}
+	double compute_log_Pvec_word(double* new_vec, double* old_vec){
+		return _compute_log_Pvec_given_sigma(new_vec, old_vec, _sigma_phi);
+	}
+	double _compute_log_Pvec_given_sigma(double* new_vec, double* old_vec, double sigma){
+		double log_pvec = (double)_ndim_d * log(1.0 / sqrt(2.0 * PI * sigma * sigma));
+		for(int i = 0;i < _ndim_d;i++){
+			log_pvec -= (new_vec[i] - old_vec[i]) * (new_vec[i] - old_vec[i]) / (2.0 * sigma * sigma);		
+		}
+		return log_pvec;
+	}
 	double get_g0_for_word(id word_id){
 		auto itr = _g0.find(word_id);
 		assert(itr == _g0.end());
@@ -145,6 +161,19 @@ public:
 	int get_sum_word_frequency_of_doc(int doc_id){
 		assert(doc_id < _sum_n_k.size());
 		return _sum_n_k[doc_id];
+	}
+	double* get_doc_vec(int doc_id){
+		assert(doc_id < _doc_vectors.size());
+		return _doc_vectors[doc_id];
+	}
+	double* get_word_vec(id word_id){
+		auto itr = _word_vectors.find(word_id);
+		assert(itr != _word_vectors.end());
+		return itr->second;
+	}
+	void set_doc_vector(int doc_id, double* vec){
+		assert(doc_id < _doc_vectors.size());
+		_doc_vectors[doc_id] = vec;
 	}
 };
 

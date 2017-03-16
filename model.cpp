@@ -57,6 +57,7 @@ public:
 	}
 	~PyCSTM(){
 		delete _cstm;
+		delete _vocab;
 	}
 	int add_document(string filename, int train_split){
 		wifstream ifs(filename.c_str());
@@ -121,11 +122,29 @@ public:
 	}
 	void perform_mh_sampling_word(){
 	}
-	bool mh_accept_word(double* vec){
+	bool mh_accept_word_vec(double* vec){
 		return false;
 	}
 	void perform_mh_sampling_document(){
-
+		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents);
+		double* old_vec = _cstm->get_doc_vec(doc_id);
+		double* new_vec = _cstm->draw_doc_vec(old_vec);
+		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
+			_cstm->set_doc_vector(doc_id, new_vec);
+		}else{
+			_cstm->set_doc_vector(doc_id, old_vec);
+		}
+	}
+	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
+		_cstm->set_doc_vector(doc_id, old_vec);
+		double log_pw_old = _cstm->compute_Pw_given_doc(doc_id);
+		_cstm->set_doc_vector(doc_id, new_vec);
+		double log_pw_new = _cstm->compute_Pw_given_doc(doc_id);
+		double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
+		double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
+		double log_adoption_rate = log_pw_new + log_t_given_new - log_pw_old - log_t_given_old;
+		double adoption_rate = exp(log_adoption_rate);
+		return false;
 	}
 };
 
