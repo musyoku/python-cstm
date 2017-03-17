@@ -2,7 +2,7 @@
 #define _cstm_
 #include <unordered_map>
 #include <vector>
-#include <set>
+#include <unordered_set>
 #include <cassert>
 #include <cmath>
 #include "common.h"
@@ -17,7 +17,7 @@ public:
 	unordered_map<id, double> _g0;				// 単語のデフォルト確率
 	unordered_map<id, double*> _word_vectors;	// 単語ベクトル
 	vector<double*> _doc_vectors;				// 文書ベクトル
-	unordered_map<id, set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
+	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	int _ndim_d;
 	int _num_documents;
 	int _sum_word_frequency;	// 全単語の出現回数の総和
@@ -78,7 +78,7 @@ public:
 		count[word_id] += 1;
 		_sum_word_frequency += 1;
 		// 文書との対応
-		set<int> &docs = _docs_containing_word[word_id];
+		unordered_set<int> &docs = _docs_containing_word[word_id];
 		docs.insert(doc_id);
 		// 単語ベクトルを必要なら生成
 		auto itr = _word_vectors.find(word_id);
@@ -106,13 +106,13 @@ public:
 	}
 	double* draw_word_vec(double* old_vec){
 		for(int i = 0;i < _ndim_d;i++){
-			_tmp_vec[i] = Sampler::normal(old_vec[i], _sigma_phi);
+			_tmp_vec[i] = old_vec[i] + Sampler::normal(0, _sigma_phi);
 		}
 		return _tmp_vec;
 	}
 	double* draw_doc_vec(double* old_vec){
 		for(int i = 0;i < _ndim_d;i++){
-			_tmp_vec[i] = Sampler::normal(old_vec[i], _sigma_u);
+			_tmp_vec[i] = old_vec[i] + Sampler::normal(0, _sigma_u);
 		}
 		return _tmp_vec;
 	}
@@ -124,7 +124,15 @@ public:
 		double* doc_vec = _doc_vectors[doc_id];
 		double f = std::dot(word_vec, doc_vec, _ndim_d);
 		double g0 = get_g0_for_word(word_id);
-		return _alpha0 * g0 * exp(f);
+		double alpha = _alpha0 * g0 * exp(f);
+		// if(alpha > 10){
+		// 	dump_vec(doc_vec, _ndim_d);
+		// 	dump_vec(word_vec, _ndim_d);
+		// 	cout << f << endl;
+		// 	cout << g0 << endl;
+		// 	exit(0);
+		// }
+		return alpha;
 	}
 	double sum_alpha_doc(int doc_id){
 		assert(doc_id < _n_k.size());
@@ -141,6 +149,8 @@ public:
 		double log_pw = 0;
 		double sum_alpha = sum_alpha_doc(doc_id);
 		double sum_word_frequency = get_sum_word_frequency_of_doc(doc_id);
+		// cout << "	" << "sum_alpha: " << sum_alpha << endl;
+		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
 		for(int data_index = 0;data_index < dataset.size();data_index++){
 			vector<id> &word_ids = dataset[data_index];
@@ -148,9 +158,15 @@ public:
 				id word_id = word_ids[i];
 				double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
 				int n_k = get_word_count_in_doc(word_id, doc_id);
+				// cout << "	" << word_id << endl;
+				// cout << "	" << "alpha_k: " << alpha_k << endl;
+				// cout << "	" << "n_k: " << n_k << endl;
+				// cout << "	";
+				// dump_vec(_word_vectors[word_id], _ndim_d);
 				log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 			}
 		}
+		// cout << "	" << "pw: " << exp(log_pw) << endl;
 		return log_pw;
 	}
 	double compute_log_Pvec_doc(double* new_vec, double* old_vec){
@@ -205,16 +221,18 @@ public:
 		auto itr = _word_vectors.find(word_id);
 		assert(itr != _word_vectors.end());
 		double* target = itr->second;
-		for(int i = 0;i < _ndim_d;i++){
-			target[i] = source[i];
-		}
+		std::memcpy(target, source, _ndim_d * sizeof(double));
+		// for(int i = 0;i < _ndim_d;i++){
+		// 	target[i] = source[i];
+		// }
 	}
 	void set_doc_vector(int doc_id, double* source){
 		assert(doc_id < _doc_vectors.size());
 		double* target = _doc_vectors[doc_id];
-		for(int i = 0;i < _ndim_d;i++){
-			target[i] = source[i];
-		}
+		std::memcpy(target, source, _ndim_d * sizeof(double));
+		// for(int i = 0;i < _ndim_d;i++){
+		// 	target[i] = source[i];
+		// }
 	}
 };
 

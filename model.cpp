@@ -2,7 +2,7 @@
 #include <boost/format.hpp>
 #include <iostream>
 #include <string>
-#include <set>
+#include <unordered_set>
 #include <unordered_map> 
 #include "core/cstm.h"
 #include "core/vocab.h"
@@ -46,8 +46,13 @@ public:
 	vector<vector<vector<id>>> _dataset_test;
 	vector<int> _sum_word_frequency_train;
 	vector<int> _sum_word_frequency_test;
+	unordered_set<id> _words_training;
 	id* _word_ids;		// サンプリング用
 	bool _is_ready;
+	double* _old_vec_copy;
+	double* _new_vec_copy;
+	int _num_acceptance;
+	int _num_rejection;
 	PyCSTM(){
 		setlocale(LC_CTYPE, "ja_JP.UTF-8");
 		ios_base::sync_with_stdio(false);
@@ -59,20 +64,32 @@ public:
 		_cstm = new CSTM();
 		_vocab = new Vocab();
 		_is_ready = false;
+		_old_vec_copy = new double[_cstm->_ndim_d];
+		_new_vec_copy = new double[_cstm->_ndim_d];
+		_num_acceptance = 0;
+		_num_rejection = 0;
 	}
 	~PyCSTM(){
 		delete _cstm;
 		delete _vocab;
 		delete[] _word_ids;
+		delete[] _old_vec_copy;
+		delete[] _new_vec_copy;
 	}
 	void compile(){
 		_cstm->compile();
-		int num_words = _cstm->_word_vectors.size();
 		// 単語IDのランダムサンプリング用テーブル
+		for(const auto &dataset: _dataset_train){
+			for(const auto &word_ids: dataset){
+				for(const id word_id: word_ids){
+					_words_training.insert(word_id);
+				}
+			}
+		}
+		int num_words = _words_training.size();
 		_word_ids = new id[num_words];
 		int index = 0;
-		for(const auto &elem: _cstm->_word_vectors){
-			id word_id = elem.first;
+		for(const id word_id: _words_training){
 			_word_ids[index] = word_id;
 			index += 1;
 		}
@@ -150,6 +167,26 @@ public:
 			dataset.push_back(word_ids);
 		}
 	}
+	double* get_word_vec(id word_id){
+		double* old_vec = _cstm->get_word_vec(word_id);
+		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
+		return _old_vec_copy;
+	}
+	double* get_doc_vec(int doc_id){
+		double* old_vec = _cstm->get_doc_vec(doc_id);
+		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
+		return _old_vec_copy;
+	}
+	double* draw_word_vec(double* old_vec){
+		double* new_vec = _cstm->draw_word_vec(old_vec);
+		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
+		return _new_vec_copy;
+	}
+	double* draw_doc_vec(double* old_vec){
+		double* new_vec = _cstm->draw_doc_vec(old_vec);
+		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
+		return _new_vec_copy;
+	}
 	double compute_perplexity_train(){
 		double log_pw = 0;
 		int n = 0;
@@ -170,10 +207,10 @@ public:
 	}
 	void perform_mh_sampling_word(){
 		assert(_is_ready);
-		int index = Sampler::uniform_int(0, _cstm->_word_vectors.size() - 1);
+		int index = Sampler::uniform_int(0, _words_training.size() - 1);
 		id word_id = _word_ids[index];
-		double* old_vec = _cstm->get_word_vec(word_id);
-		double* new_vec = _cstm->draw_word_vec(old_vec);
+		double* old_vec = get_word_vec(word_id);
+		double* new_vec = draw_word_vec(old_vec);
 		if(mh_accept_word_vec(new_vec, old_vec, word_id)){
 			_cstm->set_word_vector(word_id, new_vec);
 		}else{
@@ -181,42 +218,53 @@ public:
 		}
 	}
 	bool mh_accept_word_vec(double* new_vec, double* old_vec, id word_id){
-		set<int> &docs = _cstm->_docs_containing_word[word_id];
+		unordered_set<int> &docs = _cstm->_docs_containing_word[word_id];
 		assert(docs.size() > 0);
+		_cstm->set_word_vector(word_id, old_vec);
 		double log_pw_old = 0;
 		for(const int doc_id: docs){
 			vector<vector<id>> &dataset = _dataset_train[doc_id];
 			log_pw_old += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
+			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
+			// log_pw_old += log(alpha);
 		}
 		_cstm->set_word_vector(word_id, new_vec);
 		double log_pw_new = 0;
 		for(const int doc_id: docs){
 			vector<vector<id>> &dataset = _dataset_train[doc_id];
 			log_pw_new += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
+			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
+			// log_pw_old += log(alpha);
 		}
-		double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
-		double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
+		// double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
+		// double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
 		double log_prior_old = _cstm->compute_log_prior_Pvec(old_vec);
 		double log_prior_new = _cstm->compute_log_prior_Pvec(new_vec);
-		double log_adoption_rate = log_pw_new + log_t_given_new - log_pw_old - log_t_given_old;
-		// double log_adoption_rate = log_pw_new - log_pw_old;
-		double adoption_rate = std::min(1.0, exp(log_adoption_rate));
+		// dump_vec(old_vec, _cstm->_ndim_d);
+		// dump_vec(new_vec, _cstm->_ndim_d);
 
-		// if(adoption_rate < 1){
+		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
+		// double log_acceptance_rate = log_prior_new - log_prior_old;
+		// double log_acceptance_rate = log_pw_new - log_pw_old;
+		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
+
+		// if(acceptance_ratio < 1){
 		// 	return false;
 		// }
 		// return true;
 		double bernoulli = Sampler::uniform(0, 1);
-		if(bernoulli <= adoption_rate){
+		if(bernoulli <= acceptance_ratio){
+			_num_acceptance += 1;
 			return true;
 		}
+		_num_rejection += 1;
 		return false;
 	}
 	void perform_mh_sampling_document(){
 		assert(_is_ready);
 		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
-		double* old_vec = _cstm->get_doc_vec(doc_id);
-		double* new_vec = _cstm->draw_doc_vec(old_vec);
+		double* old_vec = get_doc_vec(doc_id);
+		double* new_vec = draw_doc_vec(old_vec);
 		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
 			_cstm->set_doc_vector(doc_id, new_vec);
 		}else{
@@ -225,6 +273,7 @@ public:
 	}
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
 		vector<vector<id>> &dataset = _dataset_train[doc_id];
+		_cstm->set_doc_vector(doc_id, old_vec);
 		double log_pw_old = _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
 		_cstm->set_doc_vector(doc_id, new_vec);
 		double log_pw_new = _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
@@ -232,17 +281,20 @@ public:
 		double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
 		double log_prior_old = _cstm->compute_log_prior_Pvec(old_vec);
 		double log_prior_new = _cstm->compute_log_prior_Pvec(new_vec);
-		double log_adoption_rate = log_pw_new + log_t_given_new - log_pw_old - log_t_given_old;
-		// double log_adoption_rate = log_pw_new - log_pw_old;
-		double adoption_rate = std::min(1.0, exp(log_adoption_rate));
+		
+		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
+		// double log_acceptance_rate = log_pw_new - log_pw_old;
+		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
 		double bernoulli = Sampler::uniform(0, 1);
-		// if(adoption_rate < 1){
+		// if(acceptance_ratio < 1){
 		// 	return false;
 		// }
 		// return true;
-		if(bernoulli <= adoption_rate){
+		if(bernoulli <= acceptance_ratio){
+			_num_acceptance += 1;
 			return true;
 		}
+		_num_rejection += 1;
 		return false;
 	}
 };

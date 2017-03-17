@@ -3,7 +3,7 @@
 #include <iostream>
 using namespace std;
 
-#define NDIM_D 		3		// 文書・単語ベクトルの次元数
+#define NDIM_D 		2		// 文書・単語ベクトルの次元数
 #define SIGMA_U 	0.01	// 文書ベクトルのランダムウォーク幅
 #define SIGMA_PHI 	0.02	// 単語ベクトルのランダムウォーク幅
 #define SIGMA_ALPHA 0.2		// a0のランダムウォーク幅
