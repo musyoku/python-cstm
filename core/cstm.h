@@ -14,10 +14,10 @@ class CSTM{
 public:
 	vector<unordered_map<id, int>> _n_k;		// 文書ごとの単語の出現頻度
 	vector<int> _sum_n_k;						// 文書ごとの単語の出現頻度の総和
+	vector<int> _Zi;
 	unordered_map<id, double> _g0;				// 単語のデフォルト確率
 	unordered_map<id, double*> _word_vectors;	// 単語ベクトル
 	vector<double*> _doc_vectors;				// 文書ベクトル
-	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	int _ndim_d;
 	int _num_documents;
 	int _sum_word_frequency;	// 全単語の出現回数の総和
@@ -77,9 +77,6 @@ public:
 		unordered_map<id, int> &count = _n_k[doc_id];
 		count[word_id] += 1;
 		_sum_word_frequency += 1;
-		// 文書との対応
-		unordered_set<int> &docs = _docs_containing_word[word_id];
-		docs.insert(doc_id);
 		// 単語ベクトルを必要なら生成
 		auto itr = _word_vectors.find(word_id);
 		if(itr != _word_vectors.end()){
@@ -115,6 +112,9 @@ public:
 			_tmp_vec[i] = old_vec[i] + Sampler::normal(0, _sigma_u);
 		}
 		return _tmp_vec;
+	}
+	void sum_Zi(int doc_id){
+		
 	}
 	double compute_alpha_word_given_doc(id word_id, int doc_id){
 		auto itr = _word_vectors.find(word_id);
