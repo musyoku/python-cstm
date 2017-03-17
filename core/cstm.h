@@ -14,7 +14,7 @@ class CSTM{
 public:
 	vector<unordered_map<id, int>> _n_k;		// 文書ごとの単語の出現頻度
 	vector<int> _sum_n_k;						// 文書ごとの単語の出現頻度の総和
-	vector<int> _Zi;
+	vector<double> _Zi;
 	unordered_map<id, double> _g0;				// 単語のデフォルト確率
 	unordered_map<id, double*> _word_vectors;	// 単語ベクトル
 	vector<double*> _doc_vectors;				// 文書ベクトル
@@ -70,6 +70,10 @@ public:
 		}
 		assert(_n_k.size() == _num_documents);
 		assert(_sum_n_k.size() == _num_documents);
+		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+			_Zi.push_back(0);
+			update_Zi(doc_id);
+		}
 	}
 	void add_word(id word_id, int doc_id){
 		assert(doc_id < _doc_vectors.size());
@@ -101,40 +105,24 @@ public:
 		}
 		return vec;
 	}
-	double* draw_word_vec(double* old_vec){
+	double* draw_word_vector(double* old_vec){
 		for(int i = 0;i < _ndim_d;i++){
 			_tmp_vec[i] = old_vec[i] + Sampler::normal(0, _sigma_phi);
 		}
 		return _tmp_vec;
 	}
-	double* draw_doc_vec(double* old_vec){
+	double* draw_doc_vector(double* old_vec){
 		for(int i = 0;i < _ndim_d;i++){
 			_tmp_vec[i] = old_vec[i] + Sampler::normal(0, _sigma_u);
 		}
 		return _tmp_vec;
 	}
-	void sum_Zi(int doc_id){
-		
+	void update_Zi(int doc_id){
+		assert(doc_id < _Zi.size());
+		_Zi[doc_id] = sum_alpha_word_given_doc(doc_id);
+		cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
-	double compute_alpha_word_given_doc(id word_id, int doc_id){
-		auto itr = _word_vectors.find(word_id);
-		assert(itr != _word_vectors.end());
-		assert(doc_id < _doc_vectors.size());
-		double* word_vec = itr->second;
-		double* doc_vec = _doc_vectors[doc_id];
-		double f = std::dot(word_vec, doc_vec, _ndim_d);
-		double g0 = get_g0_for_word(word_id);
-		double alpha = _alpha0 * g0 * exp(f);
-		// if(alpha > 10){
-		// 	dump_vec(doc_vec, _ndim_d);
-		// 	dump_vec(word_vec, _ndim_d);
-		// 	cout << f << endl;
-		// 	cout << g0 << endl;
-		// 	exit(0);
-		// }
-		return alpha;
-	}
-	double sum_alpha_doc(int doc_id){
+	double sum_alpha_word_given_doc(int doc_id){
 		assert(doc_id < _n_k.size());
 		double sum = 0;
 		unordered_map<id, int> &count = _n_k[doc_id];
@@ -144,11 +132,41 @@ public:
 		}
 		return sum;
 	}
-	double compute_log_Pdataset_given_doc(vector<vector<id>> &dataset, int doc_id){
+	double compute_alpha_word_given_doc(id word_id, int doc_id){
+		auto itr = _word_vectors.find(word_id);
+		assert(itr != _word_vectors.end());
+		assert(doc_id < _doc_vectors.size());
+		double* word_vec = itr->second;
+		double* doc_vec = _doc_vectors[doc_id];
+		double f = std::dot(word_vec, doc_vec, _ndim_d);
+		double g0 = get_g0_of_word(word_id);
+		double alpha = _alpha0 * g0 * exp(f);
+		return alpha;
+	}
+	double compute_log_Pdocument(vector<vector<id>> &dataset, int doc_id){
+		assert(doc_id < _sum_n_k.size());
 		assert(doc_id < _n_k.size());
+		assert(doc_id < _Zi.size());
 		double log_pw = 0;
-		double sum_alpha = sum_alpha_doc(doc_id);
-		double sum_word_frequency = get_sum_word_frequency_of_doc(doc_id);
+		double sum_alpha = _Zi[doc_id];
+		// 
+		// 
+		// 
+		// 
+		// 
+		// 
+		double _sum_alpha = sum_alpha_word_given_doc(doc_id);
+		if(sum_alpha - _sum_alpha > 1e-8){
+			printf("%.32f\n", sum_alpha - _sum_alpha);
+		}
+		assert(sum_alpha - _sum_alpha < 1e-8);
+		// 
+		// 
+		// 
+		// 
+		// 
+		// 
+		double sum_word_frequency = _sum_n_k[doc_id];
 		// cout << "	" << "sum_alpha: " << sum_alpha << endl;
 		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
@@ -169,30 +187,30 @@ public:
 		// cout << "	" << "pw: " << exp(log_pw) << endl;
 		return log_pw;
 	}
-	double compute_log_Pvec_doc(double* new_vec, double* old_vec){
-		return _compute_log_Pvec_given_sigma(new_vec, old_vec, _sigma_u);
+	double compute_log_Pvector_doc(double* new_vec, double* old_vec){
+		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_u);
 	}
-	double compute_log_Pvec_word(double* new_vec, double* old_vec){
-		return _compute_log_Pvec_given_sigma(new_vec, old_vec, _sigma_phi);
+	double compute_log_Pvector_word(double* new_vec, double* old_vec){
+		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_phi);
 	}
-	double _compute_log_Pvec_given_sigma(double* new_vec, double* old_vec, double sigma){
+	double _compute_log_Pvector_given_sigma(double* new_vec, double* old_vec, double sigma){
 		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI) * sigma));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= (new_vec[i] - old_vec[i]) * (new_vec[i] - old_vec[i]) / (2.0 * sigma * sigma);		
 		}
 		return log_pvec;
 	}
-	double compute_log_prior_Pvec(double* vec){
-		return _compute_log_prior_Pvec(vec);
+	double compute_log_prior_vector(double* vec){
+		return _compute_log_prior_vector(vec);
 	}
-	double _compute_log_prior_Pvec(double* new_vec){
+	double _compute_log_prior_vector(double* new_vec){
 		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI)));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= new_vec[i] * new_vec[i] * 0.5;
 		}
 		return log_pvec;
 	}
-	double get_g0_for_word(id word_id){
+	double get_g0_of_word(id word_id){
 		auto itr = _g0.find(word_id);
 		assert(itr != _g0.end());
 		return itr->second;
@@ -201,11 +219,11 @@ public:
 		assert(doc_id < _sum_n_k.size());
 		return _sum_n_k[doc_id];
 	}
-	double* get_doc_vec(int doc_id){
+	double* get_doc_vector(int doc_id){
 		assert(doc_id < _doc_vectors.size());
 		return _doc_vectors[doc_id];
 	}
-	double* get_word_vec(id word_id){
+	double* get_word_vector(id word_id){
 		auto itr = _word_vectors.find(word_id);
 		assert(itr != _word_vectors.end());
 		return itr->second;
@@ -216,6 +234,10 @@ public:
 		auto itr = count.find(word_id);
 		assert(itr != count.end());
 		return itr->second;
+	}
+	double get_Zi(int doc_id){
+		assert(doc_id < _Zi.size());
+		return _Zi[doc_id];
 	}
 	void set_word_vector(id word_id, double* source){
 		auto itr = _word_vectors.find(word_id);
@@ -233,6 +255,14 @@ public:
 		// for(int i = 0;i < _ndim_d;i++){
 		// 	target[i] = source[i];
 		// }
+	}
+	void swap_Zi_component(int doc_id, double old_value, double new_value){
+		assert(doc_id < _Zi.size());
+		_Zi[doc_id] += new_value - old_value;
+	}
+	void set_Zi(int doc_id, double new_value){
+		assert(doc_id < _Zi.size());
+		_Zi[doc_id] = new_value;
 	}
 };
 

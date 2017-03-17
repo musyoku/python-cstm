@@ -49,6 +49,8 @@ public:
 	bool _is_ready;
 	double* _old_vec_copy;
 	double* _new_vec_copy;
+	double* _old_alpha_words;
+	double* _original_Zi;
 	int _num_acceptance;	// MH法で採択された回数
 	int _num_rejection;		// MH法で棄却された回数
 	PyCSTM(){
@@ -73,10 +75,13 @@ public:
 		delete[] _word_ids;
 		delete[] _old_vec_copy;
 		delete[] _new_vec_copy;
+		delete[] _old_alpha_words;
+		delete[] _original_Zi;
 	}
 	void compile(){
 		_cstm->compile();
 		// 単語IDのランダムサンプリング用テーブル
+		int num_docs = _dataset.size();
 		int num_words = _docs_containing_word.size();
 		_word_ids = new id[num_words];
 		int index = 0;
@@ -90,6 +95,8 @@ public:
 			cout << _sum_word_frequency[i] << ", ";
 		}
 		cout << endl;
+		_old_alpha_words = new double[num_docs];
+		_original_Zi = new double[num_docs];
 		_is_ready = true;
 	}
 	int add_document(string filename){
@@ -139,23 +146,23 @@ public:
 			dataset.push_back(word_ids);
 		}
 	}
-	double* get_word_vec(id word_id){
-		double* old_vec = _cstm->get_word_vec(word_id);
+	double* get_word_vector(id word_id){
+		double* old_vec = _cstm->get_word_vector(word_id);
 		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
 		return _old_vec_copy;
 	}
-	double* get_doc_vec(int doc_id){
-		double* old_vec = _cstm->get_doc_vec(doc_id);
+	double* get_doc_vector(int doc_id){
+		double* old_vec = _cstm->get_doc_vector(doc_id);
 		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
 		return _old_vec_copy;
 	}
-	double* draw_word_vec(double* old_vec){
-		double* new_vec = _cstm->draw_word_vec(old_vec);
+	double* draw_word_vector(double* old_vec){
+		double* new_vec = _cstm->draw_word_vector(old_vec);
 		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
-	double* draw_doc_vec(double* old_vec){
-		double* new_vec = _cstm->draw_doc_vec(old_vec);
+	double* draw_doc_vector(double* old_vec){
+		double* new_vec = _cstm->draw_doc_vector(old_vec);
 		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
@@ -164,7 +171,7 @@ public:
 		int n = 0;
 		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
 			vector<vector<id>> &dataset = _dataset[doc_id];
-			log_pw += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id) / (double)_sum_word_frequency[doc_id];
+			log_pw += _cstm->compute_log_Pdocument(dataset, doc_id) / (double)_sum_word_frequency[doc_id];
 		}
 		return exp(-log_pw);
 	}
@@ -172,12 +179,20 @@ public:
 		assert(_is_ready);
 		int index = Sampler::uniform_int(0, _docs_containing_word.size() - 1);
 		id word_id = _word_ids[index];
-		double* old_vec = get_word_vec(word_id);
-		double* new_vec = draw_word_vec(old_vec);
+		double* old_vec = get_word_vector(word_id);
+		double* new_vec = draw_word_vector(old_vec);
 		if(mh_accept_word_vec(new_vec, old_vec, word_id)){
 			_cstm->set_word_vector(word_id, new_vec);
 		}else{
-			_cstm->set_word_vector(word_id, old_vec);
+			_cstm->set_word_vector(word_id, old_vec);	// 元に戻す
+			auto itr = _docs_containing_word.find(word_id);
+			assert(itr != _docs_containing_word.end());
+			unordered_set<int> &docs = itr->second;
+			int cache_index = 0;
+			for(const int doc_id: docs){
+				_cstm->set_Zi(doc_id, _original_Zi[cache_index]);	// 元に戻す
+				cache_index++;
+			}
 		}
 	}
 	bool mh_accept_word_vec(double* new_vec, double* old_vec, id word_id){
@@ -185,26 +200,37 @@ public:
 		assert(itr != _docs_containing_word.end());
 		unordered_set<int> &docs = itr->second;
 		assert(docs.size() > 0);
-		_cstm->set_word_vector(word_id, old_vec);
+		// _cstm->set_word_vector(word_id, old_vec);
 		double log_pw_old = 0;
+		int cache_index = 0;
 		for(const int doc_id: docs){
+			_old_alpha_words[cache_index] = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
+			_original_Zi[cache_index] = _cstm->get_Zi(doc_id);
 			vector<vector<id>> &dataset = _dataset[doc_id];
-			log_pw_old += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
+			log_pw_old += _cstm->compute_log_Pdocument(dataset, doc_id);
+			cache_index++;
 			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// log_pw_old += log(alpha);
 		}
-		_cstm->set_word_vector(word_id, new_vec);
+		_cstm->set_word_vector(word_id, new_vec);	// 新しい単語ベクトルで差し替える
 		double log_pw_new = 0;
+		cache_index = 0;
 		for(const int doc_id: docs){
+			double old_alpha_word = _old_alpha_words[cache_index];
+			double new_alpha_word = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
+			// cout << old_alpha_word << ", " << new_alpha_word << endl;
+			_cstm->swap_Zi_component(doc_id, old_alpha_word, new_alpha_word);	// Ziの計算を簡略化
 			vector<vector<id>> &dataset = _dataset[doc_id];
-			log_pw_new += _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
+			log_pw_new += _cstm->compute_log_Pdocument(dataset, doc_id);
+			// _cstm->swap_Zi_component(doc_id, new_alpha_word, old_alpha_word);	// 元に戻す
+			cache_index++;
 			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// log_pw_old += log(alpha);
 		}
-		// double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
-		// double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
-		double log_prior_old = _cstm->compute_log_prior_Pvec(old_vec);
-		double log_prior_new = _cstm->compute_log_prior_Pvec(new_vec);
+		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
+		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
+		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
+		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
 		// dump_vec(old_vec, _cstm->_ndim_d);
 		// dump_vec(new_vec, _cstm->_ndim_d);
 
@@ -228,8 +254,8 @@ public:
 	void perform_mh_sampling_document(){
 		assert(_is_ready);
 		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
-		double* old_vec = get_doc_vec(doc_id);
-		double* new_vec = draw_doc_vec(old_vec);
+		double* old_vec = get_doc_vector(doc_id);
+		double* new_vec = draw_doc_vector(old_vec);
 		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
 			_cstm->set_doc_vector(doc_id, new_vec);
 		}else{
@@ -239,13 +265,13 @@ public:
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
 		vector<vector<id>> &dataset = _dataset[doc_id];
 		_cstm->set_doc_vector(doc_id, old_vec);
-		double log_pw_old = _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
+		double log_pw_old = _cstm->compute_log_Pdocument(dataset, doc_id);
 		_cstm->set_doc_vector(doc_id, new_vec);
-		double log_pw_new = _cstm->compute_log_Pdataset_given_doc(dataset, doc_id);
-		double log_t_given_old = _cstm->compute_log_Pvec_doc(new_vec, old_vec);
-		double log_t_given_new = _cstm->compute_log_Pvec_doc(old_vec, new_vec);
-		double log_prior_old = _cstm->compute_log_prior_Pvec(old_vec);
-		double log_prior_new = _cstm->compute_log_prior_Pvec(new_vec);
+		double log_pw_new = _cstm->compute_log_Pdocument(dataset, doc_id);
+		double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
+		double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
+		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
+		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
 		
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		// double log_acceptance_rate = log_pw_new - log_pw_old;

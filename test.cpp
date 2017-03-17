@@ -18,7 +18,7 @@ void test_1(){
 	dump_vec(model->_cstm->_doc_vectors[0], model->_cstm->_ndim_d);
 	dump_vec(model->_cstm->_doc_vectors[1], model->_cstm->_ndim_d);
 	for(int i = 0;i < 1000000;i++){
-		model->perform_mh_sampling_document();
+		// model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
 		// double ppl_train = model->compute_perplexity_train();
 		// double ppl_test = model->compute_perplexity_test();
@@ -61,7 +61,7 @@ void test_1(){
 	multiset<std::pair<id, double>, multiset_value_comparator> ranking;
 	for(const auto &elem: model->_docs_containing_word){
 		id word_id = elem.first;
-		double* vec = model->get_word_vec(word_id);
+		double* vec = model->get_word_vector(word_id);
 		double distance = 0;
 		for(int i = 0;i < model->_cstm->_ndim_d;i++){
 			distance += vec[i] * vec[i];
