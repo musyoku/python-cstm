@@ -17,10 +17,6 @@ public:
 		double gb = gamma(b, 1.0);
 		return ga / (ga + gb);
 	}
-	static double normal(double mean, double stddev){
-		normal_distribution<double> distribution(mean, stddev);
-		return distribution(mt);
-	}
 	static double bernoulli(double p){
 		uniform_real_distribution<double> distribution(0, 1);
 		double r = distribution(mt);

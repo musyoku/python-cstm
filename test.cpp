@@ -2,6 +2,7 @@
 #include <chrono>
 #include <unordered_map>
 #include "core/hashmap.h"
+#include "core/sampler.h"
 #include "model.cpp"
 using namespace std;
 using namespace emilib;
@@ -22,11 +23,11 @@ void test_1(){
 	dump_vec(model->_cstm->_doc_vectors[0], model->_cstm->_ndim_d);
 	dump_vec(model->_cstm->_doc_vectors[1], model->_cstm->_ndim_d);
 
-	int num_docs = model->get_num_docs();
+	int num_docs = model->get_num_documents();
 	int num_words = model->get_num_vocabulary();
 	int word_doc_ratio = (int)(num_words / (double)num_docs);
 
-	for(int i = 1;i < 2000000;i++){
+	for(int i = 1;i < 10000;i++){
 		model->perform_mh_sampling_document();
 		int word_repeat = Sampler::uniform_int(0, word_doc_ratio);
 		for(int j = 0;j < word_repeat;j++){
@@ -38,10 +39,9 @@ void test_1(){
 		// model->_vocab->dump();
 
 		if(i % 10000 == 0){
-			for(const auto &elem: model->_cstm->_word_vectors){
-				id word_id = elem.first;
+			for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
 				wstring word = model->_vocab->token_id_to_string(word_id);
-				double* vec = elem.second;
+				double* vec = model->get_word_vector(word_id);
 				// wcout << word << endl;
 				// dump_vec(vec, model->_cstm->_ndim_d);
 			}
@@ -66,7 +66,7 @@ void test_1(){
 			id word_id = elem.first;
 			wstring word = model->_vocab->token_id_to_string(word_id);
 			double alpha = model->_cstm->compute_alpha_word_given_doc(word_id, doc_id);
-			wcout << word << ": " << alpha / sum_alpha << endl;
+			wcout << word << ": " << word_id << ": " << alpha / sum_alpha << endl;
 		}
 	}
 	std::pair<id, double> pair;
@@ -117,7 +117,37 @@ void test2(){
     cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
 }
 
+void test3(){
+	PyCSTM* model = new PyCSTM();
+	model->add_document("./documents/doc1.txt");
+	model->add_document("./documents/doc2.txt");
+	model->compile();
+	{
+		double* vec = model->get_word_vector(10);
+	    auto start = std::chrono::system_clock::now();
+		uniform_real_distribution<double> distribution(0, 0.01);
+		for(int i = 0;i < 100000;i++){
+			vec = model->draw_word_vector(vec);
+		}
+	    auto end = std::chrono::system_clock::now();
+	    auto diff = end - start;
+	    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+	}
+	{
+		double* vec = model->get_word_vector(10);
+	    auto start = std::chrono::system_clock::now();
+		uniform_real_distribution<double> distribution(0, 0.01);
+		for(int i = 0;i < 100000;i++){
+			vec = model->_cstm->draw_word_vector(vec);
+		}
+	    auto end = std::chrono::system_clock::now();
+	    auto diff = end - start;
+	    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+	}
+}
+
 int main(int argc, char *argv[]){
+	// test3();
     auto start = std::chrono::system_clock::now();
 	for(int i = 0;i < 1;i++){
 		test_1();

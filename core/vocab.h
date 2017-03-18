@@ -4,7 +4,6 @@
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <string>
-#include <vector>
 #include <fstream>
 #include "common.h"
 using namespace std;
@@ -12,6 +11,7 @@ using namespace std;
 class Vocab{
 private:
 	unordered_map<id, wstring> _string_by_token_id;
+	unordered_map<id, id> _hash_to_id;
 	hash<wstring> _hash_func;
 	
 	friend class boost::serialization::access;
@@ -23,15 +23,20 @@ private:
 	}
 public:
 	Vocab(){
-		_string_by_token_id[ID_BOS] = L"<bos>";
-		_string_by_token_id[ID_EOS] = L"<eos>";
+		
 	}
 	id add_string(wstring &str){
-		id token_id = string_to_token_id(str);
-		_string_by_token_id[token_id] = str;
-		return token_id;
+		id hash = hash_string(str);
+		auto itr = _hash_to_id.find(hash);
+		if(itr == _hash_to_id.end()){
+			id token_id = _hash_to_id.size();
+			_string_by_token_id[token_id] = str;
+			_hash_to_id[hash] = token_id;
+			return token_id;
+		}
+		return itr->second;
 	}
-	id string_to_token_id(wstring &str){
+	id hash_string(wstring &str){
 		return (id)_hash_func(str);
 	}
 	wstring token_id_to_string(id token_id){

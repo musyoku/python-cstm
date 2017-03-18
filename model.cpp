@@ -47,7 +47,6 @@ public:
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	hashmap<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	id* _word_ids;			// サンプリング用
-	bool _is_ready;
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double* _old_alpha_words;
@@ -62,16 +61,17 @@ public:
 		locale ctype_default(locale::classic(), default_loc, locale::ctype); //※
 		wcout.imbue(ctype_default);
 		wcin.imbue(ctype_default);
-		_cstm = new CSTM();
+		_cstm = NULL;
 		_vocab = new Vocab();
-		_is_ready = false;
-		_old_vec_copy = new double[_cstm->_ndim_d];
-		_new_vec_copy = new double[_cstm->_ndim_d];
+		_old_vec_copy = new double[NDIM_D];
+		_new_vec_copy = new double[NDIM_D];
 		_num_acceptance = 0;
 		_num_rejection = 0;
 	}
 	~PyCSTM(){
-		delete _cstm;
+		if(_cstm != NULL){
+			delete _cstm;
+		}
 		delete _vocab;
 		delete[] _word_ids;
 		delete[] _old_vec_copy;
@@ -80,10 +80,27 @@ public:
 		delete[] _original_Zi;
 	}
 	void compile(){
-		_cstm->compile();
-		// 単語IDのランダムサンプリング用テーブル
 		int num_docs = _dataset.size();
 		int num_vocabulary = _docs_containing_word.size();
+		// CSTM
+		_cstm = new CSTM(num_docs, num_vocabulary);
+		for(int doc_id = 0;doc_id < num_docs;doc_id++){
+			_cstm->add_document(doc_id);
+			vector<vector<id>> &dataset = _dataset[doc_id];
+			for(int data_index = 0;data_index < dataset.size();data_index++){
+				vector<id> &word_ids = dataset[data_index];
+				for(const id word_id: word_ids){
+					_cstm->add_word(word_id, doc_id);
+				}
+			}
+		}
+		_cstm->compile();
+		// Zi
+		for(int doc_id = 0;doc_id < num_docs;doc_id++){
+			unordered_set<id> &word_set = _word_set[doc_id];
+			_cstm->update_Zi(doc_id, word_set);
+		}
+		// 単語IDのランダムサンプリング用テーブル
 		_word_ids = new id[num_vocabulary];
 		int index = 0;
 		for(const auto &elem: _docs_containing_word){
@@ -98,13 +115,12 @@ public:
 		cout << endl;
 		_old_alpha_words = new double[num_docs];
 		_original_Zi = new double[num_docs];
-		_is_ready = true;
 	}
 	int add_document(string filename){
 		wifstream ifs(filename.c_str());
 		assert(ifs.fail() == false);
 		// 文書の追加
-		int doc_id = _cstm->add_document();
+		int doc_id = _dataset.size();
 		vector<vector<id>> dataset;
 		_dataset.push_back(dataset);
 		_sum_word_frequency.push_back(0);
@@ -142,7 +158,6 @@ public:
 				}
 				id word_id = _vocab->add_string(word);
 				word_ids.push_back(word_id);
-				_cstm->add_word(word_id, doc_id);
 				unordered_set<int> &docs = _docs_containing_word[word_id];
 				docs.insert(doc_id);
 				unordered_set<id> &word_set = _word_set[doc_id];
@@ -151,11 +166,11 @@ public:
 			dataset.push_back(word_ids);
 		}
 	}
-	int get_num_docs(){
-		return _dataset.size();
+	int get_num_documents(){
+		return _cstm->_num_documents;
 	}
 	int get_num_vocabulary(){
-		return _docs_containing_word.size();
+		return _cstm->_num_vocabulary;
 	}
 	double* get_word_vector(id word_id){
 		double* old_vec = _cstm->get_word_vector(word_id);
@@ -184,10 +199,10 @@ public:
 			unordered_set<id> &word_set = _word_set[doc_id];
 			log_pw += _cstm->compute_log_Pdocument(word_set, doc_id) / (double)_sum_word_frequency[doc_id];
 		}
-		return exp(-log_pw);
+		return exp(-log_pw / _dataset.size());
 	}
 	void perform_mh_sampling_word(){
-		assert(_is_ready);
+		assert(_cstm != NULL);
 		int index = Sampler::uniform_int(0, _docs_containing_word.size() - 1);
 		id word_id = _word_ids[index];
 		double* old_vec = get_word_vector(word_id);
@@ -257,23 +272,24 @@ public:
 		return false;
 	}
 	void perform_mh_sampling_document(){
-		assert(_is_ready);
+		assert(_cstm != NULL);
 		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
 		double* old_vec = get_doc_vector(doc_id);
 		double* new_vec = draw_doc_vector(old_vec);
+		double original_Zi = _cstm->get_Zi(doc_id);
 		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
 			_cstm->set_doc_vector(doc_id, new_vec);
 		}else{
 			_cstm->set_doc_vector(doc_id, old_vec);
-			_cstm->update_Zi(doc_id);
+			_cstm->set_Zi(doc_id, original_Zi);
 		}
 	}
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
 		unordered_set<id> &word_set = _word_set[doc_id];
-		_cstm->set_doc_vector(doc_id, old_vec);
+		// _cstm->set_doc_vector(doc_id, old_vec);
 		double log_pw_old = _cstm->compute_log_Pdocument(word_set, doc_id);
 		_cstm->set_doc_vector(doc_id, new_vec);
-		_cstm->update_Zi(doc_id);
+		_cstm->update_Zi(doc_id, word_set);
 		double log_pw_new = _cstm->compute_log_Pdocument(word_set, doc_id);
 		double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
 		double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
