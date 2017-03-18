@@ -26,7 +26,7 @@ void test_1(){
 	int num_words = model->get_num_vocabulary();
 	int word_doc_ratio = (int)(num_words / (double)num_docs);
 
-	for(int i = 1;i < 10000;i++){
+	for(int i = 1;i < 2000000;i++){
 		model->perform_mh_sampling_document();
 		int word_repeat = Sampler::uniform_int(0, word_doc_ratio);
 		for(int j = 0;j < word_repeat;j++){
