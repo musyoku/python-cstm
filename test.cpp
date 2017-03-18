@@ -1,6 +1,10 @@
 #include <set>
+#include <chrono>
+#include <unordered_map>
+#include "core/hashmap.h"
 #include "model.cpp"
 using namespace std;
+using namespace emilib;
 
 struct multiset_value_comparator {
 	bool operator()(const pair<id, double> &a, const pair<id, double> &b) {
@@ -17,9 +21,17 @@ void test_1(){
 
 	dump_vec(model->_cstm->_doc_vectors[0], model->_cstm->_ndim_d);
 	dump_vec(model->_cstm->_doc_vectors[1], model->_cstm->_ndim_d);
-	for(int i = 0;i < 1000000;i++){
-		// model->perform_mh_sampling_document();
-		model->perform_mh_sampling_word();
+
+	int num_docs = model->get_num_docs();
+	int num_words = model->get_num_vocabulary();
+	int word_doc_ratio = (int)(num_words / (double)num_docs);
+
+	for(int i = 1;i < 10000;i++){
+		model->perform_mh_sampling_document();
+		int word_repeat = Sampler::uniform_int(0, word_doc_ratio);
+		for(int j = 0;j < word_repeat;j++){
+			model->perform_mh_sampling_word();
+		}
 		// double ppl_train = model->compute_perplexity_train();
 		// double ppl_test = model->compute_perplexity_test();
 		// cout << i << " PPL: " << ppl_train << endl;
@@ -82,7 +94,35 @@ void test_1(){
 	delete model;
 }
 
+void test2(){
+	unordered_map<id, int> umap;
+	HashMap<id, int> hmap;
+    auto start = std::chrono::system_clock::now();
+	for(int i = 0;i < 1000;i++){
+		for(id c = 0;c < 100000;c++){
+			umap[c] += 1;
+		}
+	}
+    auto end = std::chrono::system_clock::now();
+    auto diff = end - start;
+    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+    start = std::chrono::system_clock::now();
+	for(int i = 0;i < 10;i++){
+		for(id c = 0;c < 100000;c++){
+			hmap[c] += 1;
+		}
+	}
+    end = std::chrono::system_clock::now();
+    diff = end - start;
+    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+}
+
 int main(int argc, char *argv[]){
-	for(int i = 0;i < 1;i++)
+    auto start = std::chrono::system_clock::now();
+	for(int i = 0;i < 1;i++){
 		test_1();
+	}
+    auto end = std::chrono::system_clock::now();
+    auto diff = end - start;
+    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
 }

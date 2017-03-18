@@ -1,6 +1,4 @@
-#ifndef _cstm_
-#define _cstm_
-#include <unordered_map>
+#pragma once
 #include <vector>
 #include <unordered_set>
 #include <cassert>
@@ -12,11 +10,11 @@ using namespace std;
 
 class CSTM{
 public:
-	vector<unordered_map<id, int>> _n_k;		// 文書ごとの単語の出現頻度
+	vector<hashmap<id, int>> _n_k;		// 文書ごとの単語の出現頻度
 	vector<int> _sum_n_k;						// 文書ごとの単語の出現頻度の総和
 	vector<double> _Zi;
-	unordered_map<id, double> _g0;				// 単語のデフォルト確率
-	unordered_map<id, double*> _word_vectors;	// 単語ベクトル
+	hashmap<id, double> _g0;				// 単語のデフォルト確率
+	hashmap<id, double*> _word_vectors;	// 単語ベクトル
 	vector<double*> _doc_vectors;				// 文書ベクトル
 	int _ndim_d;
 	int _num_documents;
@@ -50,7 +48,7 @@ public:
 			id word_id = elem.first;
 			double sum_count = 0;
 			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
-				unordered_map<id, int> &count = _n_k[doc_id];
+				hashmap<id, int> &count = _n_k[doc_id];
 				auto itr = count.find(word_id);
 				if(itr == count.end()){
 					continue;
@@ -62,7 +60,7 @@ public:
 		}
 		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
 			int sum = 0;
-			unordered_map<id, int> &count = _n_k[doc_id];
+			hashmap<id, int> &count = _n_k[doc_id];
 			for(const auto &elem: count){
 				sum += elem.second;
 			}
@@ -78,7 +76,7 @@ public:
 	void add_word(id word_id, int doc_id){
 		assert(doc_id < _doc_vectors.size());
 		// カウントを更新
-		unordered_map<id, int> &count = _n_k[doc_id];
+		hashmap<id, int> &count = _n_k[doc_id];
 		count[word_id] += 1;
 		_sum_word_frequency += 1;
 		// 単語ベクトルを必要なら生成
@@ -94,7 +92,7 @@ public:
 		double* doc_vec = generate_vector();
 		_doc_vectors.push_back(doc_vec);
 		_num_documents++;
-		unordered_map<id, int> count;
+		hashmap<id, int> count;
 		_n_k.push_back(count);
 		return doc_id;
 	}
@@ -120,12 +118,12 @@ public:
 	void update_Zi(int doc_id){
 		assert(doc_id < _Zi.size());
 		_Zi[doc_id] = sum_alpha_word_given_doc(doc_id);
-		cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
+		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
 	double sum_alpha_word_given_doc(int doc_id){
 		assert(doc_id < _n_k.size());
 		double sum = 0;
-		unordered_map<id, int> &count = _n_k[doc_id];
+		hashmap<id, int> &count = _n_k[doc_id];
 		for(auto &elem: count){
 			id word_id = elem.first;
 			sum += compute_alpha_word_given_doc(word_id, doc_id);
@@ -143,7 +141,20 @@ public:
 		double alpha = _alpha0 * g0 * exp(f);
 		return alpha;
 	}
-	double compute_log_Pdocument(vector<vector<id>> &dataset, int doc_id){
+	double compute_reduced_log_Pdocument(id word_id, int doc_id){
+		assert(doc_id < _sum_n_k.size());
+		assert(doc_id < _n_k.size());
+		assert(doc_id < _Zi.size());
+		double log_pw = 0;
+		double sum_alpha = _Zi[doc_id];
+		double sum_word_frequency = _sum_n_k[doc_id];
+		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
+		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+		int n_k = get_word_count_in_doc(word_id, doc_id);
+		log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+		return log_pw;
+	}
+	double compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
 		assert(doc_id < _sum_n_k.size());
 		assert(doc_id < _n_k.size());
 		assert(doc_id < _Zi.size());
@@ -155,11 +166,13 @@ public:
 		// 
 		// 
 		// 
-		double _sum_alpha = sum_alpha_word_given_doc(doc_id);
-		if(sum_alpha - _sum_alpha > 1e-8){
-			printf("%.32f\n", sum_alpha - _sum_alpha);
-		}
-		assert(sum_alpha - _sum_alpha < 1e-8);
+		// double _sum_alpha = sum_alpha_word_given_doc(doc_id);
+		// if(abs(sum_alpha - _sum_alpha) > 1e-6){
+		// 	printf("%.16e\n", sum_alpha);
+		// 	printf("%.16e\n", _sum_alpha);
+		// 	printf("%.16e\n", sum_alpha - _sum_alpha);
+		// }
+		// assert(abs(sum_alpha - _sum_alpha) < 1e-6);
 		// 
 		// 
 		// 
@@ -170,20 +183,49 @@ public:
 		// cout << "	" << "sum_alpha: " << sum_alpha << endl;
 		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
-		for(int data_index = 0;data_index < dataset.size();data_index++){
-			vector<id> &word_ids = dataset[data_index];
-			for(int i = 0 ;i < word_ids.size();i++){
-				id word_id = word_ids[i];
-				double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
-				int n_k = get_word_count_in_doc(word_id, doc_id);
-				// cout << "	" << word_id << endl;
-				// cout << "	" << "alpha_k: " << alpha_k << endl;
-				// cout << "	" << "n_k: " << n_k << endl;
-				// cout << "	";
-				// dump_vec(_word_vectors[word_id], _ndim_d);
-				log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
-			}
+		// if(std::isnan(log_pw)){
+		// 	cout << sum_alpha << endl;
+		// 	cout << sum_word_frequency << endl;
+		// 	cout << lgamma(sum_alpha) << endl;
+		// 	cout << lgamma(sum_alpha + sum_word_frequency) << endl;
+		// 	exit(0);
+		// }
+		// int sum_n_k_check = 0;
+		// double sum_alpha_check = 0;
+		for(const id word_id: word_set){
+			double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+			int n_k = get_word_count_in_doc(word_id, doc_id);
+			// cout << "	" << word_id << endl;
+			// cout << "	" << "alpha_k: " << alpha_k << endl;
+			// cout << "	" << "n_k: " << n_k << endl;
+			// cout << "	";
+			// dump_vec(_word_vectors[word_id], _ndim_d);
+			log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+			// sum_n_k_check += n_k;
+			// sum_alpha_check += alpha_k;
 		}
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		// if(abs(sum_alpha_check - sum_alpha) > 1e-6){
+		// 	printf("%.16e\n", sum_alpha_check - sum_alpha);
+		// }
+		// assert(abs(sum_alpha_check - sum_alpha) < 1e-6);
+		// if(abs(sum_n_k_check - sum_word_frequency) > 1e-6){
+		// 	printf("%.16e\n", sum_n_k_check - sum_word_frequency);
+		// }
+		// assert(abs(sum_n_k_check - sum_word_frequency) < 1e-6);
+		//
+		//
+		//
+		//
+		//
+		//
+		//
 		// cout << "	" << "pw: " << exp(log_pw) << endl;
 		return log_pw;
 	}
@@ -230,7 +272,7 @@ public:
 	}
 	int get_word_count_in_doc(id word_id, int doc_id){
 		assert(doc_id < _n_k.size());
-		unordered_map<id, int> &count = _n_k[doc_id];
+		hashmap<id, int> &count = _n_k[doc_id];
 		auto itr = count.find(word_id);
 		assert(itr != count.end());
 		return itr->second;
@@ -265,5 +307,3 @@ public:
 		_Zi[doc_id] = new_value;
 	}
 };
-
-#endif

@@ -1,13 +1,8 @@
-#ifndef _vocab_
-#define _vocab_
+#pragma once
 #include <boost/serialization/serialization.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/unordered_map.hpp>
-#include <boost/serialization/map.hpp>
-#include <boost/serialization/vector.hpp>
-#include <unordered_map>
-#include <map>
 #include <string>
 #include <vector>
 #include <fstream>
@@ -75,5 +70,3 @@ public:
 		} 
 	}
 };
-
-#endif

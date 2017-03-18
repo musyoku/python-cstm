@@ -1,9 +1,14 @@
-#ifndef _common_
-#define _common_
+#pragma once
 #include <iostream>
+#include <unordered_map>
+#include "hashmap.h"
 using namespace std;
+using namespace emilib;
+template<class T, class U>
+// using hashmap = unordered_map<T, U>;
+using hashmap = HashMap<T, U>;
 
-#define NDIM_D 		3		// 文書・単語ベクトルの次元数
+#define NDIM_D 		5		// 文書・単語ベクトルの次元数
 #define SIGMA_U 	0.01	// 文書ベクトルのランダムウォーク幅
 #define SIGMA_PHI 	0.02	// 単語ベクトルのランダムウォーク幅
 #define SIGMA_ALPHA 0.2		// a0のランダムウォーク幅
@@ -28,5 +33,3 @@ void dump_vec(double* vec, int len){
 	}
 	cout << vec[len - 1] << "]" << endl;
 }
-
-#endif
