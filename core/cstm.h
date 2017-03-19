@@ -117,13 +117,13 @@ public:
 		_doc_vectors[doc_id] = doc_vec;
 	}
 	double generate_noise_from_standard_normal_distribution(){
-		return standard_normal_distribution(Sampler::mt);
+		return standard_normal_distribution(Sampler::minstd);
 	}
 	double generate_noise_doc(){
-		return noise_doc(Sampler::mt);
+		return noise_doc(Sampler::minstd);
 	}
 	double generate_noise_word(){
-		return noise_word(Sampler::mt);
+		return noise_word(Sampler::minstd);
 	}
 	double* generate_vector(){
 		double* vec = new double[_ndim_d];
@@ -162,7 +162,7 @@ public:
 		assert(doc_id < _num_documents);
 		double* word_vec = _word_vectors[word_id];
 		double* doc_vec = _doc_vectors[doc_id];
-		double f = std::dot(word_vec, doc_vec, _ndim_d);
+		double f = compute_dot(word_vec, doc_vec, _ndim_d);
 		double g0 = get_g0_of_word(word_id);
 		double alpha = _alpha0 * g0 * exp(f);
 		assert(alpha > 0);

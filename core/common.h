@@ -15,14 +15,12 @@ using hashmap = HashMap<T, U>;
 
 using id = size_t;
 
-namespace std{
-	double dot(double* a, double* b, int length){
-		double dot = 0;
-		for(int i = 0;i < length;i++){
-			dot += a[i] * b[i];
-		}
-		return dot;
+double compute_dot(double* a, double* b, int length){
+	double dot = 0;
+	for(int i = 0;i < length;i++){
+		dot += a[i] * b[i];
 	}
+	return dot;
 }
 void dump_vec(double* vec, int len){
 	cout << "[";

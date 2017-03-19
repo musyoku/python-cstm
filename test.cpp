@@ -126,7 +126,7 @@ void test3(){
 		double* vec = model->get_word_vector(10);
 	    auto start = std::chrono::system_clock::now();
 		uniform_real_distribution<double> distribution(0, 0.01);
-		for(int i = 0;i < 100000;i++){
+		for(int i = 0;i < 1178528;i++){
 			vec = model->draw_word_vector(vec);
 		}
 	    auto end = std::chrono::system_clock::now();
@@ -137,7 +137,7 @@ void test3(){
 		double* vec = model->get_word_vector(10);
 	    auto start = std::chrono::system_clock::now();
 		uniform_real_distribution<double> distribution(0, 0.01);
-		for(int i = 0;i < 100000;i++){
+		for(int i = 0;i < 1178528;i++){
 			vec = model->_cstm->draw_word_vector(vec);
 		}
 	    auto end = std::chrono::system_clock::now();
@@ -146,7 +146,28 @@ void test3(){
 	}
 }
 
+void test4(){
+	for(int i = 0;i < 100;i++){
+		cout << Sampler::uniform(0, 1) << endl;
+	}
+	exit(0);
+}
+
+void test5(){
+	double alpha = 2.1;
+	double n = 10;
+	double a = exp(lgamma(alpha + n) - lgamma(alpha));
+	printf("%.16e\n", a);
+	double b = 1;
+	for(int i = 0;i < n;i++){
+		b *= alpha + i;
+	}
+	printf("%.16e\n", b);
+	exit(0);
+}
+
 int main(int argc, char *argv[]){
+	test5();
 	// test3();
     auto start = std::chrono::system_clock::now();
 	for(int i = 0;i < 1;i++){

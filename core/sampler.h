@@ -6,6 +6,7 @@ using namespace std;
 class Sampler{
 public:
 	static mt19937 mt;
+	static minstd_rand minstd;
 	static default_random_engine rand_gen;
 
 	static double gamma(double a, double b){
@@ -38,4 +39,5 @@ public:
 // int seed = chrono::system_clock::now().time_since_epoch().count();
 int seed = 0;
 mt19937 Sampler::mt(seed);
+minstd_rand Sampler::minstd(seed);
 default_random_engine Sampler::rand_gen(seed);
