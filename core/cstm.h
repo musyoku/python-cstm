@@ -1,4 +1,5 @@
 #pragma once
+#include <boost/math/special_functions/gamma.hpp>
 #include <unordered_set>
 #include <cassert>
 #include <cmath>
@@ -25,9 +26,10 @@ public:
 	double _sigma_alpha;
 	double _alpha0;
 	double* _tmp_vec;
-	normal_distribution<double> standard_normal_distribution;
-	normal_distribution<double> noise_word;
-	normal_distribution<double> noise_doc;
+	normal_distribution<double> _standard_normal_distribution;
+	normal_distribution<double> _noise_word;
+	normal_distribution<double> _noise_doc;
+	normal_distribution<double> _noise_alpha0;
 	CSTM(int num_documents, int num_vocabulary){
 		_ndim_d = NDIM_D;
 		_sigma_u = SIGMA_U;
@@ -35,9 +37,10 @@ public:
 		_sigma_alpha = SIGMA_ALPHA;
 		_num_vocabulary = num_vocabulary;
 		_num_documents = num_documents;
-		standard_normal_distribution = normal_distribution<double>(0, 1);
-		noise_word = normal_distribution<double>(0, _sigma_u);
-		noise_doc = normal_distribution<double>(0, _sigma_phi);
+		_standard_normal_distribution = normal_distribution<double>(0, 1);
+		_noise_word = normal_distribution<double>(0, _sigma_u);
+		_noise_doc = normal_distribution<double>(0, _sigma_phi);
+		_noise_alpha0 = normal_distribution<double>(0, _sigma_alpha);
 		_alpha0 = 1;
 		_sum_word_frequency = 0;
 		_tmp_vec = generate_vector();
@@ -117,13 +120,13 @@ public:
 		_doc_vectors[doc_id] = doc_vec;
 	}
 	double generate_noise_from_standard_normal_distribution(){
-		return standard_normal_distribution(Sampler::minstd);
+		return _standard_normal_distribution(Sampler::minstd);
 	}
 	double generate_noise_doc(){
-		return noise_doc(Sampler::minstd);
+		return _noise_doc(Sampler::minstd);
 	}
 	double generate_noise_word(){
-		return noise_word(Sampler::minstd);
+		return _noise_word(Sampler::minstd);
 	}
 	double* generate_vector(){
 		double* vec = new double[_ndim_d];
@@ -144,10 +147,9 @@ public:
 		}
 		return _tmp_vec;
 	}
-	void update_Zi(int doc_id, unordered_set<id> &word_set){
-		assert(doc_id < _num_documents);
-		_Zi[doc_id] = sum_alpha_word_given_doc(doc_id, word_set);
-		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
+	double draw_alpha0(double old_alpha0){
+		double z = _noise_alpha0(Sampler::minstd);
+		return old_alpha0 * exp(z);
 	}
 	double sum_alpha_word_given_doc(int doc_id, unordered_set<id> &word_set){
 		assert(doc_id < _num_documents);
@@ -179,7 +181,121 @@ public:
 		log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		return log_pw;
 	}
+	double _compute_reduced_log_Pdocument(id word_id, int doc_id){
+		assert(doc_id < _num_documents);
+		double log_pw = 0;
+		double sum_alpha = _Zi[doc_id];
+		double sum_word_frequency = _sum_n_k[doc_id];
+		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
+		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+		int n_k = get_word_count_in_doc(word_id, doc_id);
+		log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+		return log_pw;
+	}
 	double compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
+		assert(doc_id < _num_documents);
+		double log_pw = 0;
+		double sum_alpha = _Zi[doc_id];
+		// printf("%.16e\n", sum_alpha);
+		assert(sum_alpha > 0);
+		
+		double sum_word_frequency_over_docs = 0;
+		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+			sum_word_frequency_over_docs += _sum_n_k[doc_id];
+		}
+		for(int i = 2;i <= sum_word_frequency_over_docs;i++){
+			log_pw += log(i);
+		}
+		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
+			double sum = 0;
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				sum += _n_k[doc_id][word_id];
+			}
+			for(int i = 2;i <= sum;i++){
+				log_pw -= log(i);
+			}
+		}
+		// 
+		// 
+		// 
+		// 
+		// 
+		// 
+		// double _sum_alpha = sum_alpha_word_given_doc(doc_id, word_set);
+		// if(abs(sum_alpha - _sum_alpha) > 1e-6){
+		// 	printf("%.16e\n", sum_alpha);
+		// 	printf("%.16e\n", _sum_alpha);
+		// 	printf("%.16e\n", sum_alpha - _sum_alpha);
+		// }
+		// assert(abs(sum_alpha - _sum_alpha) < 1e-6);
+		// 
+		// 
+		// 
+		// 
+		// 
+		// 
+		double sum_word_frequency = _sum_n_k[doc_id];
+		// cout << "	" << "sum_alpha: " << sum_alpha << endl;
+		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
+		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
+		// if(std::isnan(log_pw)){
+		// 	cout << sum_alpha << endl;
+		// 	cout << sum_word_frequency << endl;
+		// 	cout << lgamma(sum_alpha) << endl;
+		// 	cout << lgamma(sum_alpha + sum_word_frequency) << endl;
+		// 	exit(0);
+		// }
+		// int sum_n_k_check = 0;
+		// double sum_alpha_check = 0;
+		for(const id word_id: word_set){
+			double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+			int n_k = get_word_count_in_doc(word_id, doc_id);
+			// cout << "	" << word_id << endl;
+			// cout << "	" << "alpha_k: " << alpha_k << endl;
+			// cout << "	" << "n_k: " << n_k << endl;
+			// cout << "	";
+			// dump_vec(_word_vectors[word_id], _ndim_d);
+			if(n_k > 10){
+				// n_k > 10の場合はlgammaを使った法が速い
+				log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+			}else{
+				double tmp = 0;
+				for(int i = 0;i < n_k;i++){
+					tmp += log(alpha_k + i);
+				}
+				log_pw += tmp;
+			}
+			// sum_n_k_check += n_k;
+			// sum_alpha_check += alpha_k;
+		}
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		// if(abs(sum_alpha_check - sum_alpha) > 1e-6){
+		// 	printf("%.16e\n", sum_alpha_check);
+		// 	printf("%.16e\n", sum_alpha);
+		// 	printf("%.16e\n", abs(sum_alpha_check - sum_alpha));
+		// }
+		// assert(abs(sum_alpha_check - sum_alpha) < 1e-6);
+		// if(abs(sum_n_k_check - sum_word_frequency) > 1e-6){
+		// 	printf("%.16e\n", sum_n_k_check - sum_word_frequency);
+		// }
+		// assert(abs(sum_n_k_check - sum_word_frequency) < 1e-6);
+		//
+		//
+		//
+		//
+		//
+		//
+		//
+		// cout << "	" << "pw: " << exp(log_pw) << endl;
+		return log_pw;
+	}
+	double _compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
 		assert(doc_id < _num_documents);
 		double log_pw = 0;
 		double sum_alpha = _Zi[doc_id];
@@ -279,6 +395,9 @@ public:
 		}
 		return log_pvec;
 	}
+	double get_alpha0(){
+		return _alpha0;
+	}
 	double get_g0_of_word(id word_id){
 		assert(word_id < _num_vocabulary);
 		return _g0[word_id];
@@ -305,6 +424,9 @@ public:
 		assert(doc_id < _num_documents);
 		return _Zi[doc_id];
 	}
+	void set_alpha0(double alpha0){
+		_alpha0 = alpha0;
+	}
 	void set_word_vector(id word_id, double* source){
 		assert(word_id < _num_vocabulary);
 		double* target = _word_vectors[word_id];
@@ -321,12 +443,22 @@ public:
 		// 	target[i] = source[i];
 		// }
 	}
+	void update_Zi(int doc_id, unordered_set<id> &word_set){
+		assert(doc_id < _num_documents);
+		_Zi[doc_id] = sum_alpha_word_given_doc(doc_id, word_set);
+		assert(_Zi[doc_id] > 0);
+		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
+	}
 	void swap_Zi_component(int doc_id, double old_value, double new_value){
 		assert(doc_id < _num_documents);
 		_Zi[doc_id] += new_value - old_value;
+		assert(_Zi[doc_id] > 0);
+		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
 	void set_Zi(int doc_id, double new_value){
 		assert(doc_id < _num_documents);
+		assert(new_value > 0);
 		_Zi[doc_id] = new_value;
+		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
 };

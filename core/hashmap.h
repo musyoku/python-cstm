@@ -26,7 +26,6 @@ class HashMap
 {
 private:
 	using MyType = HashMap<KeyT, ValueT, HashT, CompT>;
-
 	using PairT = std::pair<KeyT, ValueT>;
 public:
 	using size_type       = size_t;

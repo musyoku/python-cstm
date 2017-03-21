@@ -36,8 +36,8 @@ public:
 	}
 };
 
-// int seed = chrono::system_clock::now().time_since_epoch().count();
-int seed = 0;
+int seed = chrono::system_clock::now().time_since_epoch().count();
+// int seed = 0;
 mt19937 Sampler::mt(seed);
 minstd_rand Sampler::minstd(seed);
 default_random_engine Sampler::rand_gen(seed);
