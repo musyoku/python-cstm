@@ -16,12 +16,12 @@ struct multiset_value_comparator {
 void test_1(){
 	PyCSTM* model = new PyCSTM();
 	int doc_id;
-	doc_id = model->add_document("./documents/doc1.txt");
-	// doc_id = model->add_document("./documents/doc2.txt");
-	// doc_id = model->add_document("./documents/doc3.txt");
-	// doc_id = model->add_document("./documents/doc4.txt");
-	// doc_id = model->add_document("./documents/doc5.txt");
-	// doc_id = model->add_document("./documents/doc6.txt");
+	doc_id = model->add_document("./documents/0.txt");
+	doc_id = model->add_document("./documents/1.txt");
+	doc_id = model->add_document("./documents/2.txt");
+	doc_id = model->add_document("./documents/3.txt");
+	doc_id = model->add_document("./documents/4.txt");
+	doc_id = model->add_document("./documents/5.txt");
 	model->compile();
 
 	int num_docs = model->get_num_documents();
@@ -39,14 +39,14 @@ void test_1(){
 		// cout << i << " PPL: " << ppl_train << endl;
 		// model->_vocab->dump();
 
-		if(i % 10000 == 0){
+		if(i % 500 == 0){
 			for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
 				wstring word = model->_vocab->token_id_to_string(word_id);
 				double* vec = model->get_word_vector(word_id);
 				// wcout << word << endl;
 				// dump_vec(vec, model->_cstm->_ndim_d);
 			}
-			cout << "Epoch " << i / 10000 << " PPL: " << model->compute_perplexity() << endl;
+			cout << "Epoch " << i / 500 << " PPL: " << model->compute_perplexity() << endl;
 			cout << model->_num_acceptance_doc / (double)(model->_num_acceptance_doc + model->_num_rejection_doc) << ", ";
 			model->_num_acceptance_doc = 0;
 			model->_num_rejection_doc = 0;

@@ -45,6 +45,7 @@ public:
 	vector<vector<vector<id>>> _dataset;
 	vector<unordered_set<id>> _word_set;
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
+	vector<id> _random_word_ids;
 	hashmap<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	id* _word_ids;			// サンプリング用
 	double* _old_vec_copy;
@@ -92,6 +93,10 @@ public:
 	void compile(){
 		int num_docs = _dataset.size();
 		int num_vocabulary = _docs_containing_word.size();
+		// 単語のランダムサンプリング用
+		for(id word_id = 0;word_id < num_vocabulary;word_id++){
+			_random_word_ids.push_back(word_id);
+		}
 		// CSTM
 		_cstm = new CSTM(num_docs, num_vocabulary);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
@@ -207,7 +212,6 @@ public:
 			unordered_set<id> &word_set = _word_set[doc_id];
 			log_pw += _cstm->compute_log_Pdocument(word_set, doc_id) / (double)(word_set.size());
 		}
-		cout << "log_pw: " << log_pw << endl;
 		return exp(-log_pw);
 	}
 	void update_all_Zi(){
@@ -218,8 +222,11 @@ public:
 	}
 	void perform_mh_sampling_word(){
 		assert(_cstm != NULL);
+		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
 		int num_vocabulary = _docs_containing_word.size();
-		for(id word_id = 0;word_id < num_vocabulary;word_id++){
+		int limit = Sampler::uniform_int(0, num_vocabulary);
+		for(int i = 0;i < limit;i++){
+			id word_id = _random_word_ids[i];
 			double* old_vec = get_word_vector(word_id);
 			double* new_vec = draw_word_vector(old_vec);
 			if(mh_accept_word_vec(new_vec, old_vec, word_id)){

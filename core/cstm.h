@@ -26,6 +26,7 @@ public:
 	double _sigma_alpha;
 	double _alpha0;
 	double* _tmp_vec;
+	double* _log_likelihood_first_term;
 	normal_distribution<double> _standard_normal_distribution;
 	normal_distribution<double> _noise_word;
 	normal_distribution<double> _noise_doc;
@@ -50,6 +51,7 @@ public:
 		_n_k = new int*[_num_documents];
 		_sum_n_k = new int[_num_documents];
 		_Zi = new double[_num_documents];
+		_log_likelihood_first_term = new double[_num_documents];
 		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			_word_vectors[word_id] = NULL;
 		}
@@ -96,6 +98,20 @@ public:
 			sum_word_frequency_check += sum;
 		}
 		assert(sum_word_frequency_check == _sum_word_frequency);
+		// 文書の単語集合の事後分布の式の最初の項はキャッシュできるのでしておく
+		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+			double log_pw = 0;
+			for(int i = 2;i <= _sum_n_k[doc_id];i++){
+				log_pw += log(i);
+			}
+			int* count = _n_k[doc_id];
+			for(id word_id = 0;word_id < _num_vocabulary;word_id++){
+				for(int i = 2;i <= count[word_id];i++){
+					log_pw -= log(i);
+				}
+			}
+			_log_likelihood_first_term[doc_id] = log_pw;
+		}
 	}
 	void add_word(id word_id, int doc_id){
 		assert(doc_id < _num_documents);
@@ -194,27 +210,10 @@ public:
 	}
 	double compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
 		assert(doc_id < _num_documents);
-		double log_pw = 0;
+		double log_pw = _log_likelihood_first_term[doc_id];
 		double sum_alpha = _Zi[doc_id];
 		// printf("%.16e\n", sum_alpha);
 		assert(sum_alpha > 0);
-		
-		double sum_word_frequency_over_docs = 0;
-		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
-			sum_word_frequency_over_docs += _sum_n_k[doc_id];
-		}
-		for(int i = 2;i <= sum_word_frequency_over_docs;i++){
-			log_pw += log(i);
-		}
-		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
-			double sum = 0;
-			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
-				sum += _n_k[doc_id][word_id];
-			}
-			for(int i = 2;i <= sum;i++){
-				log_pw -= log(i);
-			}
-		}
 		// 
 		// 
 		// 
