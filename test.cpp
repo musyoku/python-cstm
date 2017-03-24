@@ -33,7 +33,7 @@ void test1(){
 	cout << "# of words: " << num_words << endl;
 	int word_doc_ratio = (int)(num_words / (double)num_docs);
 
-	for(int i = 1;i < 50000;i++){
+	for(int i = 1;i < 5000000;i++){
 		model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
 		// model->perform_mh_sampling_alpha0();
@@ -352,8 +352,8 @@ int main(int argc, char *argv[]){
 	// test6();
 	// test3();
     auto start = std::chrono::system_clock::now();
-	for(int i = 0;i < 10;i++){
-		test8();
+	for(int i = 0;i < 1;i++){
+		test1();
 	}
     auto end = std::chrono::system_clock::now();
     auto diff = end - start;
