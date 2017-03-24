@@ -15,6 +15,7 @@ struct multiset_value_comparator {
 };
 
 void test1(){
+	string dirname = "out";
 	PyCSTM* model = new PyCSTM();
 	int doc_id;
 	doc_id = model->add_document("./documents/geforce.txt");
@@ -33,6 +34,7 @@ void test1(){
 	cout << "# of words: " << num_words << endl;
 	int word_doc_ratio = (int)(num_words / (double)num_docs);
 
+    auto start = std::chrono::system_clock::now();
 	for(int i = 1;i < 5000000;i++){
 		model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
@@ -45,23 +47,24 @@ void test1(){
 		// model->_vocab->dump();
 
 		if(i % 500 == 0){
-			for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
-				wstring word = model->_vocab->token_id_to_string(word_id);
-				double* vec = model->get_word_vector(word_id);
-				// wcout << word << endl;
-				// dump_vec(vec, model->_cstm->_ndim_d);
-			}
+			// for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
+			// 	wstring word = model->_vocab->token_id_to_string(word_id);
+			// 	double* vec = model->get_word_vector(word_id);
+			// 	// wcout << word << endl;
+			// 	// dump_vec(vec, model->_cstm->_ndim_d);
+			// }
 			cout << "Epoch " << i / 500 << " PPL: " << model->compute_perplexity() << endl;
 			cout << model->_num_acceptance_doc / (double)(model->_num_acceptance_doc + model->_num_rejection_doc) << ", ";
-			model->_num_acceptance_doc = 0;
-			model->_num_rejection_doc = 0;
 			cout << model->_num_acceptance_word / (double)(model->_num_acceptance_word + model->_num_rejection_word) << ", ";
-			model->_num_acceptance_word = 0;
-			model->_num_rejection_word = 0;
 			cout << model->_num_acceptance_alpha0 / (double)(model->_num_acceptance_alpha0 + model->_num_rejection_alpha0) << endl;
-			model->_num_acceptance_alpha0 = 0;
-			model->_num_rejection_alpha0 = 0;
 			cout << "alpha0 <- " << model->_cstm->_alpha0 << endl;
+		    auto end = std::chrono::system_clock::now();
+		    auto diff = end - start;
+		    double elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
+		    cout << model->_num_word_vec_sampled / elapsed_time * 1000.0 << " updates/sec" << endl;
+			model->reset_statistics();
+			model->save(dirname);
+		    start = std::chrono::system_clock::now();
 		}
 	}
 	cout << model->_num_acceptance_doc / (double)(model->_num_acceptance_doc + model->_num_rejection_doc) << endl;

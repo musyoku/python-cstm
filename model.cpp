@@ -57,6 +57,8 @@ public:
 	double* _new_vec_copy;
 	double* _old_alpha_words;
 	double* _original_Zi;
+	bool _compiled;
+	// 統計
 	// MH法で採択された回数
 	int _num_acceptance_doc;
 	int _num_acceptance_word;
@@ -65,6 +67,9 @@ public:
 	int _num_rejection_doc;
 	int _num_rejection_word;
 	int _num_rejection_alpha0;
+	// サンプリング回数
+	int _num_word_vec_sampled;
+	int _num_doc_vec_sampled;
 	PyCSTM(){
 		setlocale(LC_CTYPE, "ja_JP.UTF-8");
 		ios_base::sync_with_stdio(false);
@@ -77,12 +82,8 @@ public:
 		_vocab = new Vocab();
 		_old_vec_copy = new double[NDIM_D];
 		_new_vec_copy = new double[NDIM_D];
-		_num_acceptance_doc = 0;
-		_num_acceptance_word = 0;
-		_num_acceptance_alpha0 = 0;
-		_num_rejection_doc = 0;
-		_num_rejection_word = 0;
-		_num_rejection_alpha0 = 0;
+		reset_statistics();
+		_compiled = false;
 	}
 	~PyCSTM(){
 		if(_cstm != NULL){
@@ -95,6 +96,7 @@ public:
 		delete[] _original_Zi;
 	}
 	void compile(){
+		assert(_compiled == false);
 		int num_docs = _dataset.size();
 		int num_vocabulary = _docs_containing_word.size();
 		// 単語のランダムサンプリング用
@@ -201,6 +203,16 @@ public:
 		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
+	void reset_statistics(){
+		_num_acceptance_doc = 0;
+		_num_acceptance_word = 0;
+		_num_acceptance_alpha0 = 0;
+		_num_rejection_doc = 0;
+		_num_rejection_word = 0;
+		_num_rejection_alpha0 = 0;
+		_num_word_vec_sampled = 0;
+		_num_doc_vec_sampled = 0;
+	}
 	double compute_perplexity(){
 		double log_pw = 0;
 		int n = 0;
@@ -228,6 +240,7 @@ public:
 			if(mh_accept_word_vec(new_vec, old_vec, word_id)){
 				_cstm->set_word_vector(word_id, new_vec);
 			}
+			_num_word_vec_sampled += 1;
 		}
 	}
 	bool mh_accept_word_vec(double* new_vec, double* old_vec, id word_id){
@@ -315,16 +328,14 @@ public:
 		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
 		double* old_vec = get_doc_vector(doc_id);
 		double* new_vec = draw_doc_vector(old_vec);
-		double original_Zi = _cstm->get_Zi(doc_id);
 		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
 			_cstm->set_doc_vector(doc_id, new_vec);
-		}else{
-			_cstm->set_doc_vector(doc_id, old_vec);
-			_cstm->set_Zi(doc_id, original_Zi);
 		}
+		_num_doc_vec_sampled += 1;
 	}
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
 		unordered_set<id> &word_set = _word_set[doc_id];
+		double original_Zi = _cstm->get_Zi(doc_id);
 		// _cstm->set_doc_vector(doc_id, old_vec);
 		double log_pw_old = _cstm->compute_log_Pdocument(word_set, doc_id);
 		// //
@@ -352,8 +363,8 @@ public:
 		_cstm->set_doc_vector(doc_id, new_vec);
 		_cstm->update_Zi(doc_id, word_set);
 		double log_pw_new = _cstm->compute_log_Pdocument(word_set, doc_id);
-		double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
-		double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
+		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
+		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
 		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
 		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
 		
@@ -369,6 +380,8 @@ public:
 			_num_acceptance_doc += 1;
 			return true;
 		}
+		_cstm->set_doc_vector(doc_id, old_vec);
+		_cstm->set_Zi(doc_id, original_Zi);
 		_num_rejection_doc += 1;
 		return false;
 	}
@@ -434,6 +447,7 @@ public:
 			iarchive >> _sum_word_frequency;
 			iarchive >> _random_word_ids;
 			iarchive >> _docs_containing_word;
+			_compiled = true;
 		}
 	}
 	void save(string dirname){
