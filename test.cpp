@@ -1,6 +1,7 @@
 #include <set>
 #include <chrono>
 #include <unordered_map>
+#include <fstream>
 #include "core/hashmap.h"
 #include "core/sampler.h"
 #include "model.cpp"
@@ -13,22 +14,26 @@ struct multiset_value_comparator {
 	}   
 };
 
-void test_1(){
+void test1(){
 	PyCSTM* model = new PyCSTM();
 	int doc_id;
-	doc_id = model->add_document("./documents/0.txt");
-	doc_id = model->add_document("./documents/1.txt");
-	doc_id = model->add_document("./documents/2.txt");
-	doc_id = model->add_document("./documents/3.txt");
-	doc_id = model->add_document("./documents/4.txt");
-	doc_id = model->add_document("./documents/5.txt");
+	doc_id = model->add_document("./documents/geforce.txt");
+	doc_id = model->add_document("./documents/gochiusa.txt");
+	doc_id = model->add_document("./documents/imas.txt");
+	doc_id = model->add_document("./documents/kemono.txt");
+	doc_id = model->add_document("./documents/macbook.txt");
+	doc_id = model->add_document("./documents/monst.txt");
+	doc_id = model->add_document("./documents/pad.txt");
+	doc_id = model->add_document("./documents/tekketsu.txt");
+	doc_id = model->add_document("./documents/win10.txt");
 	model->compile();
-
 	int num_docs = model->get_num_documents();
 	int num_words = model->get_num_vocabulary();
+	cout << "# of documents: " << num_docs << endl;
+	cout << "# of words: " << num_words << endl;
 	int word_doc_ratio = (int)(num_words / (double)num_docs);
 
-	for(int i = 1;i < 100000;i++){
+	for(int i = 1;i < 50000;i++){
 		model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
 		// model->perform_mh_sampling_alpha0();
@@ -103,24 +108,64 @@ void test_1(){
 void test2(){
 	unordered_map<id, int> umap;
 	HashMap<id, int> hmap;
-    auto start = std::chrono::system_clock::now();
-	for(int i = 0;i < 1000;i++){
-		for(id c = 0;c < 100000;c++){
-			umap[c] += 1;
+	{
+	    auto start = std::chrono::system_clock::now();
+		for(int i = 0;i < 1000;i++){
+			for(id c = 0;c < 100000;c++){
+				umap[c] += 1;
+			}
 		}
+	    auto end = std::chrono::system_clock::now();
+	    auto diff = end - start;
+	    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
 	}
-    auto end = std::chrono::system_clock::now();
-    auto diff = end - start;
-    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
-    start = std::chrono::system_clock::now();
-	for(int i = 0;i < 10;i++){
-		for(id c = 0;c < 100000;c++){
-			hmap[c] += 1;
+	{
+	    auto start = std::chrono::system_clock::now();
+		for(int i = 0;i < 1000;i++){
+			for(id c = 0;c < 100000;c++){
+				hmap[c] += 1;
+			}
 		}
+	    auto end = std::chrono::system_clock::now();
+	    auto diff = end - start;
+	    string filename = "out/hmap.bin";
+		std::ofstream ofs(filename);
+		boost::archive::binary_oarchive oarchive(ofs);
+		oarchive << hmap;
+	    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
 	}
-    end = std::chrono::system_clock::now();
-    diff = end - start;
-    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+	{
+	    auto start = std::chrono::system_clock::now();
+	    int sum = 0;
+		for(int i = 0;i < 1000;i++){
+			for(id c = 0;c < 100000;c++){
+				sum += umap[c];
+			}
+		}
+		cout << sum << endl;
+	    auto end = std::chrono::system_clock::now();
+	    auto diff = end - start;
+	    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+	}
+	{
+		HashMap<id, int> hmap;
+	    string filename = "out/hmap.bin";
+		std::ifstream ifs(filename);
+		boost::archive::binary_iarchive iarchive(ifs);
+		iarchive >> hmap;
+	    auto start = std::chrono::system_clock::now();
+	    int sum = 0;
+		for(int i = 0;i < 1000;i++){
+			for(id c = 0;c < 100000;c++){
+				sum += hmap[c];
+			}
+		}
+		cout << sum << endl;
+	    auto end = std::chrono::system_clock::now();
+	    auto diff = end - start;
+	    cout << std::chrono::duration_cast<std::chrono::milliseconds>(diff).count() << endl;
+	}
+    exit(0);
 }
 
 void test3(){
@@ -197,22 +242,20 @@ void test5(){
 void test6(){
 	PyCSTM* model = new PyCSTM();
 	int doc_id;
-	doc_id = model->add_document("./documents/doc1.txt");
-	doc_id = model->add_document("./documents/doc2.txt");
+	doc_id = model->add_document("./documents/0.txt");
+	doc_id = model->add_document("./documents/1.txt");
+	doc_id = model->add_document("./documents/2.txt");
 	model->compile();
-	for(int i = 1;i < 10000;i++){
+	for(int i = 1;i < 10;i++){
 		model->perform_mh_sampling_document();
-		for(int j = 0;j < 10;j++){
-			model->perform_mh_sampling_word();
-		}
+		model->perform_mh_sampling_word();
 	}
-	unordered_set<id> &word_set = model->_word_set[0];
-	double log_pw = model->_cstm->compute_log_Pdocument(word_set, 0) / (double)(word_set.size());
-	cout << word_set.size() << endl;
-	cout << model->_sum_word_frequency[0] << endl;
-	cout << exp(-log_pw) << endl;
+	// unordered_set<id> &word_set = model->_word_set[0];
+	// double log_pw = model->_cstm->compute_log_Pdocument(word_set, 0) / (double)(word_set.size());
+	// cout << word_set.size() << endl;
+	// cout << model->_sum_word_frequency[0] << endl;
+	// cout << exp(-log_pw) << endl;
 	delete model;
-	exit(0);
 }
 
 void test7(){
@@ -230,13 +273,87 @@ void test7(){
 	exit(0);
 }
 
+void test8(){
+	string dirname = "./out/";
+	PyCSTM* model = new PyCSTM();
+	int doc_id;
+	doc_id = model->add_document("./documents/geforce.txt");
+	model->compile();
+
+	for(int i = 1;i < 100;i++){
+		model->perform_mh_sampling_document();
+		model->perform_mh_sampling_word();
+	}
+	model->save(dirname);
+	{
+		std::pair<id, double> pair;
+		multiset<std::pair<id, double>, multiset_value_comparator> ranking;
+		for(const auto &elem: model->_docs_containing_word){
+			id word_id = elem.first;
+			double* vec = model->get_word_vector(word_id);
+			double distance = 0;
+			for(int i = 0;i < model->_cstm->_ndim_d;i++){
+				distance += vec[i] * vec[i];
+			}
+			distance = sqrt(distance);
+			pair.first = word_id;
+			pair.second = distance;
+			ranking.insert(pair);
+		}
+		int num_to_show = 10;
+		for(const auto &elem: ranking){
+			id word_id = elem.first;
+			double distance = elem.second;
+			wstring word = model->_vocab->token_id_to_string(word_id);
+			wcout << word << ": " << distance << endl;
+			num_to_show--;
+			if(num_to_show < 0){
+				break;
+			}
+		}
+	}
+	delete model;
+
+	model = new PyCSTM();
+	model->load(dirname);
+	{
+		std::pair<id, double> pair;
+		multiset<std::pair<id, double>, multiset_value_comparator> ranking;
+		for(const auto &elem: model->_docs_containing_word){
+			id word_id = elem.first;
+			double* vec = model->get_word_vector(word_id);
+			double distance = 0;
+			for(int i = 0;i < model->_cstm->_ndim_d;i++){
+				distance += vec[i] * vec[i];
+			}
+			distance = sqrt(distance);
+			pair.first = word_id;
+			pair.second = distance;
+			ranking.insert(pair);
+		}
+		int num_to_show = 10;
+		for(const auto &elem: ranking){
+			id word_id = elem.first;
+			double distance = elem.second;
+			wstring word = model->_vocab->token_id_to_string(word_id);
+			wcout << word << ": " << distance << endl;
+			num_to_show--;
+			if(num_to_show < 0){
+				break;
+			}
+		}
+	}
+	exit(0);
+}
+
 int main(int argc, char *argv[]){
+	// test2();
 	// test5();
 	// test6();
 	// test3();
     auto start = std::chrono::system_clock::now();
-	for(int i = 0;i < 1;i++){
-		test_1();
+	for(int i = 0;i < 10;i++){
+		test8();
 	}
     auto end = std::chrono::system_clock::now();
     auto diff = end - start;

@@ -1,3 +1,9 @@
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/vector.hpp>
+#include <boost/serialization/unordered_set.hpp>
 #include <boost/python.hpp>
 #include <boost/format.hpp>
 #include <iostream>
@@ -47,7 +53,6 @@ public:
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	vector<id> _random_word_ids;
 	hashmap<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
-	id* _word_ids;			// サンプリング用
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double* _old_alpha_words;
@@ -84,7 +89,6 @@ public:
 			delete _cstm;
 		}
 		delete _vocab;
-		delete[] _word_ids;
 		delete[] _old_vec_copy;
 		delete[] _new_vec_copy;
 		delete[] _old_alpha_words;
@@ -114,14 +118,6 @@ public:
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			unordered_set<id> &word_set = _word_set[doc_id];
 			_cstm->update_Zi(doc_id, word_set);
-		}
-		// 単語IDのランダムサンプリング用テーブル
-		_word_ids = new id[num_vocabulary];
-		int index = 0;
-		for(const auto &elem: _docs_containing_word){
-			id word_id = elem.first;
-			_word_ids[index] = word_id;
-			index += 1;
 		}
 		assert(_sum_word_frequency.size() == _dataset.size());
 		for(int i = 0;i < _sum_word_frequency.size();i++){
@@ -411,6 +407,45 @@ public:
 		_cstm->set_alpha0(old_alpha0);
 		update_all_Zi();
 		return false;
+	}
+	template <class Archive>
+	void serialize(Archive& archive, unsigned int version)
+	{
+		archive & _dataset;
+		archive & _word_set;
+		archive & _sum_word_frequency;
+		archive & _random_word_ids;
+		archive & _docs_containing_word;
+	}
+	void load(string dirname){
+		_vocab->load(dirname + "/cstm.vocab");
+		if(_cstm == NULL){
+			_cstm = new CSTM();
+		}
+		if(_cstm->load(dirname + "/cstm.model") == false){
+			delete _cstm;
+			_cstm = NULL;
+		}
+		std::ifstream ifs(dirname + "/cstm.trainer");
+		if(ifs.good()){
+			boost::archive::binary_iarchive iarchive(ifs);
+			iarchive >> _dataset;
+			iarchive >> _word_set;
+			iarchive >> _sum_word_frequency;
+			iarchive >> _random_word_ids;
+			iarchive >> _docs_containing_word;
+		}
+	}
+	void save(string dirname){
+		_vocab->save(dirname + "/cstm.vocab");
+		_cstm->save(dirname + "/cstm.model");
+		std::ofstream ofs(dirname + "/cstm.trainer");
+		boost::archive::binary_oarchive oarchive(ofs);
+		oarchive << _dataset;
+		oarchive << _word_set;
+		oarchive << _sum_word_frequency;
+		oarchive << _random_word_ids;
+		oarchive << _docs_containing_word;
 	}
 };
 

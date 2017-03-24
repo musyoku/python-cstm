@@ -4,11 +4,24 @@
 //   license: you are granted a perpetual, irrevocable license to copy, modify,
 //   publish, and distribute this file as you see fit.
 #pragma once
+#include <boost/serialization/serialization.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/archive/binary_iarchive.hpp>
+#include <boost/archive/binary_oarchive.hpp>
+#include <boost/serialization/split_free.hpp>
 #include <cstdlib>
 #include <cassert>
 #include <iterator>
 #include <utility>
+
 namespace emilib {
+
+enum class State : uint8_t
+{
+	INACTIVE, // Never been touched
+	ACTIVE,   // Is inside a search-chain, but is empty
+	FILLED    // Is set with key/value
+};
 
 /// like std::equal_to but no need to #include <functional>
 template<typename T>
@@ -589,14 +602,7 @@ private:
 		}
 	}
 
-private:
-	enum class State : uint8_t
-	{
-		INACTIVE, // Never been touched
-		ACTIVE,   // Is inside a search-chain, but is empty
-		FILLED    // Is set with key/value
-	};
-
+public:
 	HashT   _hasher;
 	CompT   _comp;
 	State*  _states           = nullptr;
@@ -605,6 +611,37 @@ private:
 	size_t  _num_filled       =  0;
 	int     _max_probe_length = -1; // Our longest bucket-brigade is this long. ONLY when we have zero elements is this ever negative (-1).
 	size_t  _mask             = 0;  // _num_buckets minus one
+
+public:
+	template <class Archive>
+	void serialize(Archive &archive, unsigned int version)
+	{
+		boost::serialization::split_free(archive, *this, version);
+	}
 };
 
 } // namespace emilib
+
+namespace boost { namespace serialization {
+template<class Archive, typename KeyT, typename ValueT, typename HashT = std::hash<KeyT>, typename CompT = emilib::HashMapEqualTo<KeyT>>
+void save(Archive &archive, const emilib::HashMap<KeyT, ValueT, HashT, CompT> &hmap, unsigned int version) {
+	archive & hmap.size();
+	for(auto itr = hmap.begin();itr != hmap.end();itr++){
+		archive & itr->first;
+		archive & itr->second;
+	}
+}
+template<class Archive, typename KeyT, typename ValueT, typename HashT = std::hash<KeyT>, typename CompT = emilib::HashMapEqualTo<KeyT>>
+void load(Archive &archive, emilib::HashMap<KeyT, ValueT, HashT, CompT> &hmap, unsigned int version) {
+	size_t map_size = 0;
+	archive & map_size;
+	hmap.clear();
+	for(int i = 0;i < map_size;i++){
+		KeyT key;
+		ValueT value;
+		archive & key;
+		archive & value;
+		hmap[key] = value;
+	}
+}
+}} // namespace boost::serialization
