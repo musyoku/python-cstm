@@ -45,7 +45,6 @@ void test1(){
 		// double ppl_test = model->compute_perplexity_test();
 		// cout << i << " PPL: " << ppl_train << endl;
 		// model->_vocab->dump();
-
 		if(i % 500 == 0){
 			// for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
 			// 	wstring word = model->_vocab->token_id_to_string(word_id);
@@ -61,7 +60,7 @@ void test1(){
 		    auto end = std::chrono::system_clock::now();
 		    auto diff = end - start;
 		    double elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
-		    cout << model->_num_word_vec_sampled / elapsed_time * 1000.0 << " updates/sec" << endl;
+		    cout << model->_num_word_vec_sampled / elapsed_time * 1000.0 << " updates/sec - " << (int)(elapsed_time * 1000.0) << " sec" << endl;
 			model->reset_statistics();
 			model->save(dirname);
 		    start = std::chrono::system_clock::now();
@@ -337,7 +336,7 @@ int main(int argc, char *argv[]){
 	// test3();
     auto start = std::chrono::system_clock::now();
 	for(int i = 0;i < 10;i++){
-		test8();
+		test1();
 	}
     auto end = std::chrono::system_clock::now();
     auto diff = end - start;

@@ -8,6 +8,7 @@
 #include <cassert>
 #include <cmath>
 #include <random>
+#include <fstream>
 #include "common.h"
 #include "sampler.h"
 using namespace std;

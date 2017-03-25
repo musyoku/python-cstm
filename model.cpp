@@ -209,6 +209,30 @@ public:
 		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
+	python::list get_word_vectors(){
+		python::list vector_array;
+		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
+			python::list vector_list;
+			double* vector = get_word_vector(word_id);
+			for(int i = 0;i < _cstm->_ndim_d;i++){
+				vector_list.append(vector[i]);
+			}
+			vector_array.append(vector_list);
+		}
+		return vector_array;
+	}
+	python::list get_doc_vectors(){
+		python::list vector_array;
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			python::list vector_list;
+			double* vector = get_doc_vector(doc_id);
+			for(int i = 0;i < _cstm->_ndim_d;i++){
+				vector_list.append(vector[i]);
+			}
+			vector_array.append(vector_list);
+		}
+		return vector_array;
+	}
 	void reset_statistics(){
 		_num_acceptance_doc = 0;
 		_num_acceptance_word = 0;
@@ -436,7 +460,7 @@ public:
 		// archive & _random_word_ids;
 		// archive & _docs_containing_word;
 	}
-	void load(string dirname){
+	bool load(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");
 		if(_cstm == NULL){
 			_cstm = new CSTM();
@@ -446,7 +470,7 @@ public:
 			_cstm = NULL;
 		}
 		if(_cstm == NULL){
-			return;
+			return false;
 		}
 		std::ifstream ifs(dirname + "/cstm.trainer");
 		if(ifs.good()){
@@ -454,6 +478,7 @@ public:
 			iarchive >> *this;
 			_compiled = true;
 		}
+		return true;
 	}
 	void save(string dirname){
 		_vocab->save(dirname + "/cstm.vocab");
@@ -466,5 +491,17 @@ public:
 
 BOOST_PYTHON_MODULE(model){
 	python::class_<PyCSTM>("cstm")
-	.def(python::init<>());
+	.def(python::init<>())
+	.def("add_document", &PyCSTM::add_document)
+	.def("compile", &PyCSTM::compile)
+	.def("reset_statistics", &PyCSTM::reset_statistics)
+	.def("get_num_vocabulary", &PyCSTM::get_num_vocabulary)
+	.def("get_num_documents", &PyCSTM::get_num_documents)
+	.def("get_word_vectors", &PyCSTM::get_word_vectors)
+	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
+	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
+	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
+	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
+	.def("load", &PyCSTM::load)
+	.def("save", &PyCSTM::save);
 }
