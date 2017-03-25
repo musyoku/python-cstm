@@ -43,6 +43,7 @@ public:
 		_sum_n_k = NULL;
 		_Zi = NULL;
 		_log_likelihood_first_term = NULL;
+		_tmp_vec = NULL;
 	}
 	CSTM(int num_documents, int num_vocabulary){
 		_ndim_d = NDIM_D;
@@ -78,21 +79,41 @@ public:
 		}
 	}
 	~CSTM(){
-		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
-			if(_word_vectors[word_id] != NULL){
-				delete[] _word_vectors[word_id];
+		if(_word_vectors != NULL){
+			for(id word_id = 0;word_id < _num_vocabulary;word_id++){
+				if(_word_vectors[word_id] != NULL){
+					delete[] _word_vectors[word_id];
+				}
 			}
 		}
-		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
-			delete[] _doc_vectors[doc_id];
-			delete[] _n_k[doc_id];
+		if(_doc_vectors != NULL){
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				if(_doc_vectors[doc_id] != NULL){
+					delete[] _doc_vectors[doc_id];
+				}
+			}
 		}
-		delete[] _n_k;
-		delete[] _tmp_vec;
-		delete[] _g0;
-		delete[] _sum_n_k;
-		delete[] _Zi;
-		delete[] _log_likelihood_first_term;
+		if(_n_k != NULL){
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				delete[] _n_k[doc_id];
+			}
+			delete[] _n_k;
+		}
+		if(_tmp_vec != NULL){
+			delete[] _tmp_vec;
+		}
+		if(_g0 != NULL){
+			delete[] _g0;
+		}
+		if(_sum_n_k != NULL){
+			delete[] _sum_n_k;
+		}
+		if(_Zi != NULL){
+			delete[] _Zi;
+		}
+		if(_log_likelihood_first_term != NULL){
+			delete[] _log_likelihood_first_term;
+		}
 	}
 	void compile(){
 		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
@@ -580,8 +601,9 @@ void load(Archive &archive, CSTM &cstm, unsigned int version) {
 	if(cstm._Zi == NULL){
 		cstm._Zi = new double[cstm._num_documents];
 	}
-	cstm._log_likelihood_first_term = new double[cstm._num_documents];
-
+	if(cstm._log_likelihood_first_term == NULL){
+		cstm._log_likelihood_first_term = new double[cstm._num_documents];
+	}
 	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
 		archive & cstm._Zi[doc_id];
 		archive & cstm._sum_n_k[doc_id];

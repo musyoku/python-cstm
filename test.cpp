@@ -282,81 +282,62 @@ void test8(){
 	int doc_id;
 	doc_id = model->add_document("./documents/geforce.txt");
 	model->compile();
-
 	for(int i = 1;i < 100;i++){
 		model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
 	}
 	model->save(dirname);
-	{
-		std::pair<id, double> pair;
-		multiset<std::pair<id, double>, multiset_value_comparator> ranking;
-		for(const auto &elem: model->_docs_containing_word){
-			id word_id = elem.first;
-			double* vec = model->get_word_vector(word_id);
-			double distance = 0;
-			for(int i = 0;i < model->_cstm->_ndim_d;i++){
-				distance += vec[i] * vec[i];
-			}
-			distance = sqrt(distance);
-			pair.first = word_id;
-			pair.second = distance;
-			ranking.insert(pair);
-		}
-		int num_to_show = 10;
-		for(const auto &elem: ranking){
-			id word_id = elem.first;
-			double distance = elem.second;
-			wstring word = model->_vocab->token_id_to_string(word_id);
-			wcout << word << ": " << distance << endl;
-			num_to_show--;
-			if(num_to_show < 0){
-				break;
-			}
-		}
-	}
 	delete model;
 
-	model = new PyCSTM();
+	for(int i = 0;i < 50;i++){
+		model = new PyCSTM();
+		model->load(dirname);
+		model->save(dirname);
+		delete model;
+	}
+	exit(0);
+}
+
+void test9(){
+	string dirname = "./out/";
+	PyCSTM* model = new PyCSTM();
 	model->load(dirname);
-	{
-		std::pair<id, double> pair;
-		multiset<std::pair<id, double>, multiset_value_comparator> ranking;
-		for(const auto &elem: model->_docs_containing_word){
-			id word_id = elem.first;
-			double* vec = model->get_word_vector(word_id);
-			double distance = 0;
-			for(int i = 0;i < model->_cstm->_ndim_d;i++){
-				distance += vec[i] * vec[i];
-			}
-			distance = sqrt(distance);
-			pair.first = word_id;
-			pair.second = distance;
-			ranking.insert(pair);
+	std::pair<id, double> pair;
+	multiset<std::pair<id, double>, multiset_value_comparator> ranking;
+	for(const auto &elem: model->_docs_containing_word){
+		id word_id = elem.first;
+		double* vec = model->get_word_vector(word_id);
+		double distance = 0;
+		for(int i = 0;i < model->_cstm->_ndim_d;i++){
+			distance += vec[i] * vec[i];
 		}
-		int num_to_show = 10;
-		for(const auto &elem: ranking){
-			id word_id = elem.first;
-			double distance = elem.second;
-			wstring word = model->_vocab->token_id_to_string(word_id);
-			wcout << word << ": " << distance << endl;
-			num_to_show--;
-			if(num_to_show < 0){
-				break;
-			}
+		distance = sqrt(distance);
+		pair.first = word_id;
+		pair.second = distance;
+		ranking.insert(pair);
+	}
+	int num_to_show = 10;
+	for(const auto &elem: ranking){
+		id word_id = elem.first;
+		double distance = elem.second;
+		wstring word = model->_vocab->token_id_to_string(word_id);
+		wcout << word << ": " << distance << endl;
+		num_to_show--;
+		if(num_to_show < 0){
+			break;
 		}
 	}
 	exit(0);
 }
 
 int main(int argc, char *argv[]){
-	// test2();
+	// test9();
 	// test5();
 	// test6();
 	// test3();
     auto start = std::chrono::system_clock::now();
-	for(int i = 0;i < 1;i++){
-		test1();
+	for(int i = 0;i < 10;i++){
+		test8();
 	}
     auto end = std::chrono::system_clock::now();
     auto diff = end - start;

@@ -52,7 +52,7 @@ public:
 	vector<unordered_set<id>> _word_set;
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	vector<id> _random_word_ids;
-	hashmap<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
+	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double* _old_alpha_words;
@@ -82,6 +82,8 @@ public:
 		_vocab = new Vocab();
 		_old_vec_copy = new double[NDIM_D];
 		_new_vec_copy = new double[NDIM_D];
+		_old_alpha_words = NULL;
+		_original_Zi = NULL;
 		reset_statistics();
 		_compiled = false;
 	}
@@ -92,8 +94,12 @@ public:
 		delete _vocab;
 		delete[] _old_vec_copy;
 		delete[] _new_vec_copy;
-		delete[] _old_alpha_words;
-		delete[] _original_Zi;
+		if(_old_alpha_words != NULL){
+			delete[] _old_alpha_words;
+		}
+		if(_original_Zi != NULL){
+			delete[] _original_Zi;
+		}
 	}
 	void compile(){
 		assert(_compiled == false);
@@ -424,11 +430,11 @@ public:
 	template <class Archive>
 	void serialize(Archive& archive, unsigned int version)
 	{
-		archive & _dataset;
-		archive & _word_set;
-		archive & _sum_word_frequency;
-		archive & _random_word_ids;
-		archive & _docs_containing_word;
+		// archive & _dataset;
+		// archive & _word_set;
+		// archive & _sum_word_frequency;
+		// archive & _random_word_ids;
+		// archive & _docs_containing_word;
 	}
 	void load(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");
@@ -439,14 +445,13 @@ public:
 			delete _cstm;
 			_cstm = NULL;
 		}
+		if(_cstm == NULL){
+			return;
+		}
 		std::ifstream ifs(dirname + "/cstm.trainer");
 		if(ifs.good()){
 			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> _dataset;
-			iarchive >> _word_set;
-			iarchive >> _sum_word_frequency;
-			iarchive >> _random_word_ids;
-			iarchive >> _docs_containing_word;
+			iarchive >> *this;
 			_compiled = true;
 		}
 	}
@@ -455,11 +460,7 @@ public:
 		_cstm->save(dirname + "/cstm.model");
 		std::ofstream ofs(dirname + "/cstm.trainer");
 		boost::archive::binary_oarchive oarchive(ofs);
-		oarchive << _dataset;
-		oarchive << _word_set;
-		oarchive << _sum_word_frequency;
-		oarchive << _random_word_ids;
-		oarchive << _docs_containing_word;
+		oarchive << *this;
 	}
 };
 
