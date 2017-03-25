@@ -97,6 +97,9 @@ def main(args):
 	ndim = cstm.get_ndim_vector()
 	for i in xrange(ndim):
 		print np.mean(word_vectors[:, i]), np.std(word_vectors[:, i])
+	for i in xrange(ndim):
+		print np.mean(doc_vectors[:, i]), np.std(doc_vectors[:, i])
+	raise Exception()
 
 
 	words_for_doc = cstm.get_high_freq_words(100)

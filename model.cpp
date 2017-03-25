@@ -136,10 +136,10 @@ public:
 			_cstm->update_Zi(doc_id, word_set);
 		}
 		assert(_sum_word_frequency.size() == _dataset.size());
-		for(int i = 0;i < _sum_word_frequency.size();i++){
-			cout << _sum_word_frequency[i] << ", ";
-		}
-		cout << endl;
+		// for(int i = 0;i < _sum_word_frequency.size();i++){
+		// 	cout << _sum_word_frequency[i] << ", ";
+		// }
+		// cout << endl;
 		_old_alpha_words = new double[num_docs];
 		_original_Zi = new double[num_docs];
 	}
@@ -200,6 +200,21 @@ public:
 	}
 	int get_ndim_vector(){
 		return _cstm->_ndim_d;
+	}
+	int get_sum_word_frequency(){
+		return std::accumulate(_sum_word_frequency.begin(), _sum_word_frequency.end(), 0);
+	}
+	int get_num_word_vec_sampled(){
+		return _num_word_vec_sampled;
+	}
+	int get_num_doc_vec_sampled(){
+		return _num_doc_vec_sampled;
+	}
+	double get_mh_acceptance_rate_for_doc_vector(){
+		return _num_acceptance_doc / (double)(_num_acceptance_doc + _num_rejection_doc);
+	}
+	double get_mh_acceptance_rate_for_word_vector(){
+		return _num_acceptance_word / (double)(_num_acceptance_word + _num_rejection_word);
 	}
 	double* get_word_vector(id word_id){
 		double* old_vec = _cstm->get_word_vector(word_id);
@@ -301,7 +316,7 @@ public:
 			unordered_set<id> &word_set = _word_set[doc_id];
 			log_pw += _cstm->compute_log_Pdocument(word_set, doc_id) / (double)(word_set.size());
 		}
-		return exp(-log_pw);
+		return exp(-log_pw / (double)get_num_documents());
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
@@ -313,7 +328,7 @@ public:
 		assert(_cstm != NULL);
 		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
 		int num_vocabulary = _docs_containing_word.size();
-		int limit = Sampler::uniform_int(0, num_vocabulary);
+		int limit = (int)(num_vocabulary / (double)get_num_documents());
 		for(int i = 0;i < limit;i++){
 			id word_id = _random_word_ids[i];
 			double* old_vec = get_word_vector(word_id);
@@ -549,13 +564,19 @@ BOOST_PYTHON_MODULE(model){
 	.def("reset_statistics", &PyCSTM::reset_statistics)
 	.def("get_num_vocabulary", &PyCSTM::get_num_vocabulary)
 	.def("get_num_documents", &PyCSTM::get_num_documents)
+	.def("get_sum_word_frequency", &PyCSTM::get_sum_word_frequency)
 	.def("get_ndim_vector", &PyCSTM::get_ndim_vector)
 	.def("get_word_vectors", &PyCSTM::get_word_vectors)
 	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
 	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
+	.def("get_mh_acceptance_rate_for_word_vector", &PyCSTM::get_mh_acceptance_rate_for_word_vector)
+	.def("get_mh_acceptance_rate_for_doc_vector", &PyCSTM::get_mh_acceptance_rate_for_doc_vector)
+	.def("get_num_doc_vec_sampled", &PyCSTM::get_num_doc_vec_sampled)
+	.def("get_num_word_vec_sampled", &PyCSTM::get_num_word_vec_sampled)
 	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
+	.def("compute_perplexity", &PyCSTM::compute_perplexity)
 	.def("load", &PyCSTM::load)
 	.def("save", &PyCSTM::save);
 }
