@@ -53,6 +53,7 @@ public:
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	vector<id> _random_word_ids;
 	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
+	unordered_map<id, int> _word_frequency;
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double* _old_alpha_words;
@@ -179,6 +180,7 @@ public:
 				docs.insert(doc_id);
 				unordered_set<id> &word_set = _word_set[doc_id];
 				word_set.insert(word_id);
+				_word_frequency[word_id] += 1;
 			}
 			dataset.push_back(word_ids);
 		}
@@ -454,11 +456,12 @@ public:
 	template <class Archive>
 	void serialize(Archive& archive, unsigned int version)
 	{
-		// archive & _dataset;
-		// archive & _word_set;
-		// archive & _sum_word_frequency;
-		// archive & _random_word_ids;
-		// archive & _docs_containing_word;
+		archive & _dataset;
+		archive & _word_set;
+		archive & _sum_word_frequency;
+		archive & _random_word_ids;
+		archive & _docs_containing_word;
+		archive & _word_frequency;
 	}
 	bool load(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");

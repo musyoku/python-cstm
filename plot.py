@@ -51,8 +51,14 @@ def main(args):
 	print word_vectors
 	print np.mean(word_vectors[:, 0]), np.std(word_vectors[:, 0])
 	print np.mean(word_vectors[:, 1]), np.std(word_vectors[:, 1])
-	plot_kde(word_vectors, args.output_dir, filename="word_kde")
-	plot_scatter(word_vectors, args.output_dir, filename="word_scatter")
+	print np.mean(word_vectors[:, 2]), np.std(word_vectors[:, 2])
+	print np.mean(word_vectors[:, 3]), np.std(word_vectors[:, 3])
+	plot_kde(word_vectors[:,0:], args.output_dir, filename="word_kde_0-1")
+	plot_scatter(word_vectors[:,0:], args.output_dir, filename="word_scatter_0-1")
+	plot_kde(word_vectors[:,1:], args.output_dir, filename="word_kde_1-2")
+	plot_scatter(word_vectors[:,1:], args.output_dir, filename="word_scatter_1-2")
+	plot_kde(word_vectors[:,2:], args.output_dir, filename="word_kde_2-3")
+	plot_scatter(word_vectors[:,2:], args.output_dir, filename="word_scatter_2-3")
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

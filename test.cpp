@@ -45,6 +45,7 @@ void test1(){
 		// double ppl_test = model->compute_perplexity_test();
 		// cout << i << " PPL: " << ppl_train << endl;
 		// model->_vocab->dump();
+		cout << "\r" << (i % 500) << " / " << 500 << flush;
 		if(i % 500 == 0){
 			// for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
 			// 	wstring word = model->_vocab->token_id_to_string(word_id);
@@ -52,7 +53,7 @@ void test1(){
 			// 	// wcout << word << endl;
 			// 	// dump_vec(vec, model->_cstm->_ndim_d);
 			// }
-			cout << "Epoch " << i / 500 << " PPL: " << model->compute_perplexity() << endl;
+			cout << "\rEpoch " << i / 500 << " PPL: " << model->compute_perplexity() << endl;
 			cout << model->_num_acceptance_doc / (double)(model->_num_acceptance_doc + model->_num_rejection_doc) << ", ";
 			cout << model->_num_acceptance_word / (double)(model->_num_acceptance_word + model->_num_rejection_word) << ", ";
 			cout << model->_num_acceptance_alpha0 / (double)(model->_num_acceptance_alpha0 + model->_num_rejection_alpha0) << endl;
@@ -60,7 +61,7 @@ void test1(){
 		    auto end = std::chrono::system_clock::now();
 		    auto diff = end - start;
 		    double elapsed_time = std::chrono::duration_cast<std::chrono::milliseconds>(diff).count();
-		    cout << model->_num_word_vec_sampled / elapsed_time * 1000.0 << " updates/sec - " << (int)(elapsed_time * 1000.0) << " sec" << endl;
+		    cout << model->_num_word_vec_sampled / elapsed_time * 1000.0 << " updates/sec - " << (int)(elapsed_time / 1000.0) << " sec" << endl;
 			model->reset_statistics();
 			model->save(dirname);
 		    start = std::chrono::system_clock::now();
