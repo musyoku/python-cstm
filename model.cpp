@@ -79,6 +79,8 @@ public:
 	int _num_word_vec_sampled;
 	int _num_doc_vec_sampled;
 	int _ndim_d;
+	// その他
+	int _random_sampling_start_index;
 	PyCSTM(){
 		setlocale(LC_CTYPE, "ja_JP.UTF-8");
 		ios_base::sync_with_stdio(false);
@@ -96,6 +98,7 @@ public:
 		reset_statistics();
 		_compiled = false;
 		_ndim_d = 0;
+		_random_sampling_start_index = 0;
 	}
 	~PyCSTM(){
 		if(_cstm != NULL){
@@ -332,11 +335,14 @@ public:
 	}
 	void perform_mh_sampling_word(){
 		assert(_cstm != NULL);
-		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
 		int num_vocabulary = _docs_containing_word.size();
 		int limit = (int)(num_vocabulary / (double)get_num_documents());
+		if(_random_sampling_start_index + limit >= _random_word_ids.size()){
+			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
+			_random_sampling_start_index = 0;
+		}
 		for(int i = 0;i < limit;i++){
-			id word_id = _random_word_ids[i];
+			id word_id = _random_word_ids[i + _random_sampling_start_index];
 			double* old_vec = get_word_vector(word_id);
 			double* new_vec = draw_word_vector(old_vec);
 			if(mh_accept_word_vec(new_vec, old_vec, word_id)){
@@ -344,6 +350,7 @@ public:
 			}
 			_num_word_vec_sampled += 1;
 		}
+		_random_sampling_start_index += limit;
 	}
 	bool mh_accept_word_vec(double* new_vec, double* old_vec, id word_id){
 		auto itr = _docs_containing_word.find(word_id);
