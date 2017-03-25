@@ -556,6 +556,8 @@ public:
 		if(ifs.good()){
 			boost::archive::binary_iarchive iarchive(ifs);
 			iarchive >> *this;
+			_old_vec_copy = new double[_ndim_d];
+			_new_vec_copy = new double[_ndim_d];
 			_compiled = true;
 		}
 		return true;
