@@ -42,19 +42,20 @@ def plot_scatter(data, out_dir=None, filename="scatter", color="blue"):
 	# pylab.ylim(-4, 4)
 	pylab.savefig("{}/{}.png".format(out_dir, filename))
 
-def plot_scatter_category(data_for_category, out_dir=None, filename="scatter", color="blue"):
+def plot_scatter_category(data_for_category, ndim, out_dir=None, filename="scatter", color="blue"):
 	mkdir(out_dir)
 	markers = ["o", "v", "^", "<", ">"]
 	palette = sns.color_palette("Set2", len(data_for_category))
 	with sns.axes_style("white"):
-		fig = pylab.gcf()
-		fig.set_size_inches(16.0, 16.0)
-		pylab.clf()
-		for category, data in enumerate(data_for_category):
-			pylab.scatter(data[:, 0], data[:, 1], s=20, marker=markers[category % len(markers)], edgecolors="none", color=palette[category])
-		# pylab.xlim(-4, 4)
-		# pylab.ylim(-4, 4)
-		pylab.savefig("{}/{}.png".format(out_dir, filename))
+		for i in xrange(ndim - 1):
+			fig = pylab.gcf()
+			fig.set_size_inches(16.0, 16.0)
+			pylab.clf()
+			for category, data in enumerate(data_for_category):
+				pylab.scatter(data[:, i], data[:, i + 1], s=20, marker=markers[category % len(markers)], edgecolors="none", color=palette[category])
+			# pylab.xlim(-4, 4)
+			# pylab.ylim(-4, 4)
+			pylab.savefig("{}/{}_{}-{}.png".format(out_dir, filename, i, i + 1))
 
 def plot_f(words, doc_vectors, out_dir=None, filename="f"):
 	with sns.axes_style("white", {"font.family": [fontfamily]}):
@@ -72,7 +73,7 @@ def plot_f(words, doc_vectors, out_dir=None, filename="f"):
 				f = np.inner(word_vector, doc_vector)
 				y = np.random.uniform(low=-5, high=5)
 				pylab.text(f, y, word, fontsize=5)
-			pylab.xlim(0, 20)
+			pylab.xlim(-20, 20)
 			pylab.ylim(-5, 5)
 			pylab.savefig("{}/{}_{}.png".format(out_dir, filename, doc_id))
 
@@ -96,22 +97,22 @@ def main(args):
 	for i in xrange(ndim):
 		print np.mean(doc_vectors[:, i]), np.std(doc_vectors[:, i])
 
+	
 	for i in xrange(ndim - 1):
 		plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
 		plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
 		plot_kde(doc_vectors[:,i:], args.output_dir, filename="doc_kde_{}-{}".format(i, i + 1))
 		plot_scatter(doc_vectors[:,i:], args.output_dir, filename="doc_scatter_{}-{}".format(i, i + 1))
+		
 
 	# 文書にカテゴリがある場合
 	num_sections = 9
 	doc_vectors_for_category = np.split(doc_vectors, num_sections)
-	plot_scatter_category(doc_vectors_for_category, args.output_dir, filename="doc_for_category")
+	plot_scatter_category(doc_vectors_for_category, ndim, args.output_dir, filename="doc_for_category")
 
-	common_words = cstm.get_high_freq_words(100)
+	common_words = cstm.get_high_freq_words(10000)
 	plot_f(common_words, doc_vectors, args.output_dir)
 	raise Exception()
-
-
 
 	for doc_id, words in enumerate(common_words):
 		print "topic", doc_id
