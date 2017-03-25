@@ -10,7 +10,7 @@ using namespace std;
 
 class Vocab{
 private:
-	unordered_map<id, wstring> _string_by_token_id;
+	unordered_map<id, wstring> _string_by_word_id;
 	unordered_map<id, id> _hash_to_id;
 	hash<wstring> _hash_func;
 	
@@ -22,37 +22,37 @@ public:
 		id hash = hash_string(str);
 		auto itr = _hash_to_id.find(hash);
 		if(itr == _hash_to_id.end()){
-			id token_id = _hash_to_id.size();
-			_string_by_token_id[token_id] = str;
-			_hash_to_id[hash] = token_id;
-			return token_id;
+			id word_id = _hash_to_id.size();
+			_string_by_word_id[word_id] = str;
+			_hash_to_id[hash] = word_id;
+			return word_id;
 		}
 		return itr->second;
 	}
 	id hash_string(wstring &str){
 		return (id)_hash_func(str);
 	}
-	wstring token_id_to_string(id token_id){
-		auto itr = _string_by_token_id.find(token_id);
-		assert(itr != _string_by_token_id.end());
+	wstring word_id_to_string(id word_id){
+		auto itr = _string_by_word_id.find(word_id);
+		assert(itr != _string_by_word_id.end());
 		return itr->second;
 	}
 	wstring token_ids_to_sentence(vector<id> &token_ids){
 		wstring sentence = L"";
-		for(const auto &token_id: token_ids){
-			wstring word = token_id_to_string(token_id);
+		for(const auto &word_id: token_ids){
+			wstring word = word_id_to_string(word_id);
 			sentence += word;
 			sentence += L" ";
 		}
 		return sentence;
 	}
-	int num_tokens(){
-		return _string_by_token_id.size();
+	int num_words(){
+		return _string_by_word_id.size();
 	}
 	template <class Archive>
 	void serialize(Archive& archive, unsigned int version)
 	{
-		archive & _string_by_token_id;
+		archive & _string_by_word_id;
 		archive & _hash_to_id;
 	}
 	void save(string filename){
@@ -68,7 +68,7 @@ public:
 		}
 	}
 	void dump(){
-		for(auto elem : _string_by_token_id) {
+		for(auto elem : _string_by_word_id) {
 			wcout << elem.first << ": " << elem.second << endl;
 		} 
 	}

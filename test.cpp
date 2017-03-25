@@ -8,12 +8,6 @@
 using namespace std;
 using namespace emilib;
 
-struct multiset_value_comparator {
-	bool operator()(const pair<id, double> &a, const pair<id, double> &b) {
-		return a.second > b.second;
-	}   
-};
-
 void test1(){
 	string dirname = "out";
 	PyCSTM* model = new PyCSTM();

@@ -8,11 +8,18 @@
 #include <boost/format.hpp>
 #include <iostream>
 #include <string>
+#include <set>
 #include <unordered_set>
 #include <unordered_map> 
 #include "core/cstm.h"
 #include "core/vocab.h"
 using namespace boost;
+
+struct multiset_value_comparator {
+	bool operator()(const pair<id, double> &a, const pair<id, double> &b) {
+		return a.second > b.second;
+	}   
+};
 
 void split_word_by(const wstring &str, wchar_t delim, vector<wstring> &elems){
 	elems.clear();
@@ -191,6 +198,9 @@ public:
 	int get_num_vocabulary(){
 		return _cstm->_num_vocabulary;
 	}
+	int get_ndim_vector(){
+		return _cstm->_ndim_d;
+	}
 	double* get_word_vector(id word_id){
 		double* old_vec = _cstm->get_word_vector(word_id);
 		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
@@ -211,15 +221,19 @@ public:
 		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
+	python::list convert_vector_to_list(double* vector){
+		python::list vector_list;
+		for(int i = 0;i < _cstm->_ndim_d;i++){
+			vector_list.append(vector[i]);
+		}
+		return vector_list;
+	}
 	python::list get_word_vectors(){
 		python::list vector_array;
 		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
 			python::list vector_list;
 			double* vector = get_word_vector(word_id);
-			for(int i = 0;i < _cstm->_ndim_d;i++){
-				vector_list.append(vector[i]);
-			}
-			vector_array.append(vector_list);
+			vector_array.append(convert_vector_to_list(vector));
 		}
 		return vector_array;
 	}
@@ -234,6 +248,41 @@ public:
 			vector_array.append(vector_list);
 		}
 		return vector_array;
+	}
+	// 1つの文書にしか出現せず、かつ出現頻度が高い単語とベクトルのペアを返す
+	python::list get_high_freq_words(size_t threshold = 100){
+		python::list result;
+		std::pair<id, double> pair;
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			multiset<std::pair<id, double>, multiset_value_comparator> ranking;
+			for(const id word_id: _word_set[doc_id]){
+				unordered_set<int> &docs = _docs_containing_word[word_id];
+				if(docs.size() > 1){
+					continue;
+				}
+				int count = _word_frequency[word_id];
+				pair.first = word_id;
+				pair.second = count;
+				ranking.insert(pair);
+			}
+			python::list result_for_doc;
+			auto itr = ranking.begin();
+			for(int n = 0;n < std::min(threshold, ranking.size());n++){
+				python::list tuple;
+				id word_id = itr->first;
+				wstring word = _vocab->word_id_to_string(word_id);
+				double* vector = get_word_vector(word_id);
+				int count = itr->second;
+				tuple.append(word_id);
+				tuple.append(word);
+				tuple.append(count);
+				tuple.append(convert_vector_to_list(vector));
+				result_for_doc.append(tuple);
+				itr++;
+			}
+			result.append(result_for_doc);
+		}
+		return result;
 	}
 	void reset_statistics(){
 		_num_acceptance_doc = 0;
@@ -500,8 +549,10 @@ BOOST_PYTHON_MODULE(model){
 	.def("reset_statistics", &PyCSTM::reset_statistics)
 	.def("get_num_vocabulary", &PyCSTM::get_num_vocabulary)
 	.def("get_num_documents", &PyCSTM::get_num_documents)
+	.def("get_ndim_vector", &PyCSTM::get_ndim_vector)
 	.def("get_word_vectors", &PyCSTM::get_word_vectors)
 	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
+	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
 	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
