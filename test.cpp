@@ -42,7 +42,7 @@ void test1(){
 		cout << "\r" << (i % 500) << " / " << 500 << flush;
 		if(i % 500 == 0){
 			// for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
-			// 	wstring word = model->_vocab->token_id_to_string(word_id);
+			// 	wstring word = model->_vocab->word_id_to_string(word_id);
 			// 	double* vec = model->get_word_vector(word_id);
 			// 	// wcout << word << endl;
 			// 	// dump_vec(vec, model->_cstm->_ndim_d);
@@ -73,7 +73,7 @@ void test1(){
 		cout << "doc: " << doc_id << endl;
 		for(const auto &elem: model->_docs_containing_word){
 			id word_id = elem.first;
-			wstring word = model->_vocab->token_id_to_string(word_id);
+			wstring word = model->_vocab->word_id_to_string(word_id);
 			double alpha = model->_cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			wcout << word << ": " << word_id << ": " << alpha / sum_alpha << endl;
 		}
@@ -96,7 +96,7 @@ void test1(){
 	for(const auto &elem: ranking){
 		id word_id = elem.first;
 		double distance = elem.second;
-		wstring word = model->_vocab->token_id_to_string(word_id);
+		wstring word = model->_vocab->word_id_to_string(word_id);
 		wcout << word << ": " << distance << endl;
 	}
 	delete model;
@@ -314,7 +314,7 @@ void test9(){
 	for(const auto &elem: ranking){
 		id word_id = elem.first;
 		double distance = elem.second;
-		wstring word = model->_vocab->token_id_to_string(word_id);
+		wstring word = model->_vocab->word_id_to_string(word_id);
 		wcout << word << ": " << distance << endl;
 		num_to_show--;
 		if(num_to_show < 0){
