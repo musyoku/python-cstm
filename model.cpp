@@ -91,8 +91,8 @@ public:
 		wcin.imbue(ctype_default);
 		_cstm = NULL;
 		_vocab = new Vocab();
-		_old_vec_copy = new double[NDIM_D];
-		_new_vec_copy = new double[NDIM_D];
+		_old_vec_copy = NULL;
+		_new_vec_copy = NULL;
 		_old_alpha_words = NULL;
 		_original_Zi = NULL;
 		reset_statistics();
@@ -105,8 +105,12 @@ public:
 			delete _cstm;
 		}
 		delete _vocab;
-		delete[] _old_vec_copy;
-		delete[] _new_vec_copy;
+		if(_old_vec_copy != NULL){
+			delete[] _old_vec_copy;
+		}
+		if(_new_vec_copy != NULL){
+			delete[] _new_vec_copy;
+		}
 		if(_old_alpha_words != NULL){
 			delete[] _old_alpha_words;
 		}
@@ -119,6 +123,8 @@ public:
 		assert(_compiled == false);
 		int num_docs = _dataset.size();
 		int num_vocabulary = _docs_containing_word.size();
+		_old_vec_copy = new double[_ndim_d];
+		_new_vec_copy = new double[_ndim_d];
 		// 単語のランダムサンプリング用
 		for(id word_id = 0;word_id < num_vocabulary;word_id++){
 			_random_word_ids.push_back(word_id);
@@ -273,38 +279,30 @@ public:
 		}
 		return vector_array;
 	}
-	// 1つの文書にしか出現せず、かつ出現頻度が高い単語とベクトルのペアを返す
+	// 出現頻度が高い単語とベクトルのペアを返す
 	python::list get_high_freq_words(size_t threshold = 100){
 		python::list result;
 		std::pair<id, double> pair;
-		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			multiset<std::pair<id, double>, multiset_value_comparator> ranking;
-			for(const id word_id: _word_set[doc_id]){
-				unordered_set<int> &docs = _docs_containing_word[word_id];
-				if(docs.size() > 1){
-					continue;
-				}
-				int count = _word_frequency[word_id];
-				pair.first = word_id;
-				pair.second = count;
-				ranking.insert(pair);
-			}
-			python::list result_for_doc;
-			auto itr = ranking.begin();
-			for(int n = 0;n < std::min(threshold, ranking.size());n++){
-				python::list tuple;
-				id word_id = itr->first;
-				wstring word = _vocab->word_id_to_string(word_id);
-				double* vector = get_word_vector(word_id);
-				int count = itr->second;
-				tuple.append(word_id);
-				tuple.append(word);
-				tuple.append(count);
-				tuple.append(convert_vector_to_list(vector));
-				result_for_doc.append(tuple);
-				itr++;
-			}
-			result.append(result_for_doc);
+		multiset<std::pair<id, double>, multiset_value_comparator> ranking;
+		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
+			int count = _word_frequency[word_id];
+			pair.first = word_id;
+			pair.second = count;
+			ranking.insert(pair);
+		}
+		auto itr = ranking.begin();
+		for(int n = 0;n < std::min(threshold, ranking.size());n++){
+			python::list tuple;
+			id word_id = itr->first;
+			wstring word = _vocab->word_id_to_string(word_id);
+			double* vector = get_word_vector(word_id);
+			int count = itr->second;
+			tuple.append(word_id);
+			tuple.append(word);
+			tuple.append(count);
+			tuple.append(convert_vector_to_list(vector));
+			result.append(tuple);
+			itr++;
 		}
 		return result;
 	}
@@ -412,6 +410,7 @@ public:
 		// dump_vec(new_vec, _ndim_d);
 
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
+		// double log_acceptance_rate = log_pw_new - log_pw_old;
 		// double log_acceptance_rate = log_prior_new - log_prior_old;
 		// double log_acceptance_rate = log_pw_new - log_pw_old;
 		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
