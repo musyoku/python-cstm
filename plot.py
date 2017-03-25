@@ -38,6 +38,20 @@ def plot_scatter(data, out_dir=None, filename="scatter", color="blue"):
 	pylab.ylim(-4, 4)
 	pylab.savefig("{}/{}.png".format(out_dir, filename))
 
+def plot_scatter_category(data_for_category, out_dir=None, filename="scatter", color="blue"):
+	mkdir(out_dir)
+	markers = ["o", "v", "^", "<", ">"]
+	palette = sns.color_palette("Set2", len(data_for_category))
+	with sns.axes_style("white"):
+		fig = pylab.gcf()
+		fig.set_size_inches(16.0, 16.0)
+		pylab.clf()
+		for category, data in enumerate(data_for_category):
+			pylab.scatter(data[:, 0], data[:, 1], s=20, marker=markers[category % len(markers)], edgecolors="none", color=palette[category])
+		# pylab.xlim(-4, 4)
+		# pylab.ylim(-4, 4)
+		pylab.savefig("{}/{}.png".format(out_dir, filename))
+
 def plot_words_for_each_document(words, ndim_vector, out_dir=None, filename="scatter"):
 	mkdir(out_dir)
 	with sns.axes_style("white", {"font.family": ["MS Gothic"]}):
@@ -94,11 +108,24 @@ def main(args):
 	doc_vectors = np.asarray(cstm.get_doc_vectors(), dtype=np.float32)
 	print doc_vectors
 	print word_vectors
+
 	ndim = cstm.get_ndim_vector()
 	for i in xrange(ndim):
 		print np.mean(word_vectors[:, i]), np.std(word_vectors[:, i])
 	for i in xrange(ndim):
 		print np.mean(doc_vectors[:, i]), np.std(doc_vectors[:, i])
+
+	for i in xrange(ndim - 1):
+		plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
+		plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
+		plot_kde(doc_vectors[:,i:], args.output_dir, filename="doc_kde_{}-{}".format(i, i + 1))
+		plot_scatter(doc_vectors[:,i:], args.output_dir, filename="doc_scatter_{}-{}".format(i, i + 1))
+
+	# 文書にカテゴリがある場合
+	num_sections = 9
+	doc_vectors_for_category = np.split(doc_vectors, num_sections)
+	plot_scatter_category(doc_vectors_for_category, args.output_dir, filename="doc_for_category")
+
 	raise Exception()
 
 
@@ -112,10 +139,6 @@ def main(args):
 		plot_words_for_each_document(words, ndim, args.output_dir, filename="word_for_doc_{}".format(doc_id))
 
 
-	for i in xrange(ndim - 1):
-		plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
-		plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
-		plot_scatter(doc_vectors[:,i:], args.output_dir, filename="doc_scatter_{}-{}".format(i, i + 1))
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
