@@ -46,8 +46,8 @@ public:
 		_log_likelihood_first_term = NULL;
 		_tmp_vec = NULL;
 	}
-	CSTM(int num_documents, int num_vocabulary){
-		_ndim_d = NDIM_D;
+	CSTM(int num_documents, int num_vocabulary, int ndim_d){
+		_ndim_d = ndim_d;
 		_sigma_u = SIGMA_U;
 		_sigma_phi = SIGMA_PHI;
 		_sigma_alpha = SIGMA_ALPHA;

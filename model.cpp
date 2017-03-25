@@ -78,6 +78,7 @@ public:
 	// サンプリング回数
 	int _num_word_vec_sampled;
 	int _num_doc_vec_sampled;
+	int _ndim_d;
 	PyCSTM(){
 		setlocale(LC_CTYPE, "ja_JP.UTF-8");
 		ios_base::sync_with_stdio(false);
@@ -94,6 +95,7 @@ public:
 		_original_Zi = NULL;
 		reset_statistics();
 		_compiled = false;
+		_ndim_d = 0;
 	}
 	~PyCSTM(){
 		if(_cstm != NULL){
@@ -110,6 +112,7 @@ public:
 		}
 	}
 	void compile(){
+		assert(_ndim_d > 0);
 		assert(_compiled == false);
 		int num_docs = _dataset.size();
 		int num_vocabulary = _docs_containing_word.size();
@@ -118,7 +121,7 @@ public:
 			_random_word_ids.push_back(word_id);
 		}
 		// CSTM
-		_cstm = new CSTM(num_docs, num_vocabulary);
+		_cstm = new CSTM(num_docs, num_vocabulary, _ndim_d);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			_cstm->add_document(doc_id);
 			vector<vector<id>> &dataset = _dataset[doc_id];
@@ -199,7 +202,7 @@ public:
 		return _cstm->_num_vocabulary;
 	}
 	int get_ndim_vector(){
-		return _cstm->_ndim_d;
+		return _ndim_d;
 	}
 	int get_sum_word_frequency(){
 		return std::accumulate(_sum_word_frequency.begin(), _sum_word_frequency.end(), 0);
@@ -218,27 +221,30 @@ public:
 	}
 	double* get_word_vector(id word_id){
 		double* old_vec = _cstm->get_word_vector(word_id);
-		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
+		std::memcpy(_old_vec_copy, old_vec, _ndim_d * sizeof(double));
 		return _old_vec_copy;
 	}
 	double* get_doc_vector(int doc_id){
 		double* old_vec = _cstm->get_doc_vector(doc_id);
-		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
+		std::memcpy(_old_vec_copy, old_vec, _ndim_d * sizeof(double));
 		return _old_vec_copy;
 	}
 	double* draw_word_vector(double* old_vec){
 		double* new_vec = _cstm->draw_word_vector(old_vec);
-		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
+		std::memcpy(_new_vec_copy, new_vec, _ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
 	double* draw_doc_vector(double* old_vec){
 		double* new_vec = _cstm->draw_doc_vector(old_vec);
-		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
+		std::memcpy(_new_vec_copy, new_vec, _ndim_d * sizeof(double));
 		return _new_vec_copy;
+	}
+	void set_ndim_d(int ndim_d){
+		_ndim_d = ndim_d;
 	}
 	python::list convert_vector_to_list(double* vector){
 		python::list vector_list;
-		for(int i = 0;i < _cstm->_ndim_d;i++){
+		for(int i = 0;i < _ndim_d;i++){
 			vector_list.append(vector[i]);
 		}
 		return vector_list;
@@ -257,7 +263,7 @@ public:
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
 			python::list vector_list;
 			double* vector = get_doc_vector(doc_id);
-			for(int i = 0;i < _cstm->_ndim_d;i++){
+			for(int i = 0;i < _ndim_d;i++){
 				vector_list.append(vector[i]);
 			}
 			vector_array.append(vector_list);
@@ -395,8 +401,8 @@ public:
 		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
 		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
 		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
-		// dump_vec(old_vec, _cstm->_ndim_d);
-		// dump_vec(new_vec, _cstm->_ndim_d);
+		// dump_vec(old_vec, _ndim_d);
+		// dump_vec(new_vec, _ndim_d);
 
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		// double log_acceptance_rate = log_prior_new - log_prior_old;
@@ -526,6 +532,7 @@ public:
 		archive & _random_word_ids;
 		archive & _docs_containing_word;
 		archive & _word_frequency;
+		archive & _ndim_d;
 	}
 	bool load(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");
@@ -573,6 +580,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_mh_acceptance_rate_for_doc_vector", &PyCSTM::get_mh_acceptance_rate_for_doc_vector)
 	.def("get_num_doc_vec_sampled", &PyCSTM::get_num_doc_vec_sampled)
 	.def("get_num_word_vec_sampled", &PyCSTM::get_num_word_vec_sampled)
+	.def("set_ndim_d", &PyCSTM::set_ndim_d)
 	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
