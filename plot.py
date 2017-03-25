@@ -38,21 +38,48 @@ def plot_scatter(data, out_dir=None, filename="scatter", color="blue"):
 	pylab.ylim(-4, 4)
 	pylab.savefig("{}/{}.png".format(out_dir, filename))
 
-def plot_words_for_each_document(words, out_dir=None, filename="scatter", color="blue"):
+def plot_words_for_each_document(words, ndim_vector, out_dir=None, filename="scatter"):
 	mkdir(out_dir)
 	with sns.axes_style("white", {"font.family": ["MS Gothic"]}):
-		fig = pylab.gcf()
-		fig.set_size_inches(16.0, 16.0)
-		pylab.clf()
-		for meta in words:
-			word_id = meta[0]
-			word = meta[1]
-			count = meta[2]
-			vector = np.asarray(meta[3], dtype=np.float32)
-			pylab.text(vector[0], vector[1], word)
-		pylab.xlim(-4, 4)
-		pylab.ylim(-4, 4)
-		pylab.savefig("{}/{}.png".format(out_dir, filename))
+		for i in xrange(ndim_vector - 1):
+			fig = pylab.gcf()
+			fig.set_size_inches(16.0, 16.0)
+			pylab.clf()
+			for meta in words:
+				word_id = meta[0]
+				word = meta[1]
+				count = meta[2]
+				vector = np.asarray(meta[3], dtype=np.float32)
+				pylab.text(vector[i], vector[i + 1], word)
+			pylab.xlim(-4, 4)
+			pylab.ylim(-4, 4)
+			pylab.savefig("{}/{}_{}-{}.png".format(out_dir, filename, i, i + 1))
+
+def plot_f(words_for_doc, doc_vectors, out_dir=None, filename="f"):
+	with sns.axes_style("white", {"font.family": ["MS Gothic"]}):
+		palette = sns.hls_palette(len(words_for_doc))
+		collection = []
+		for doc_id, words in enumerate(words_for_doc):
+			for meta in words:
+				word_id = meta[0]
+				word = meta[1]
+				count = meta[2]
+				word_vector = np.asarray(meta[3], dtype=np.float32)
+				collection.append((word, doc_id, word_vector))
+		for doc_id, doc_vector in enumerate(doc_vectors):
+			fig = pylab.gcf()
+			fig.set_size_inches(20.0, 10.0)
+			pylab.clf()
+			for meta in collection:
+				word = meta[0]
+				belongs_to = meta[1]
+				word_vector = meta[2]
+				f = np.inner(word_vector, doc_vector)
+				y = np.random.uniform(low=-5, high=5)
+				pylab.text(f, y, word, fontsize=5, color=palette[belongs_to])
+			pylab.xlim(0, 20)
+			pylab.ylim(-5, 5)
+			pylab.savefig("{}/{}_{}.png".format(out_dir, filename, doc_id))
 
 def main(args):
 	try:
@@ -71,11 +98,15 @@ def main(args):
 	for i in xrange(ndim):
 		print np.mean(word_vectors[:, i]), np.std(word_vectors[:, i])
 
-	words_for_doc = cstm.get_high_freq_words(500)
+
+	words_for_doc = cstm.get_high_freq_words(100)
+	plot_f(words_for_doc, doc_vectors, args.output_dir)
+	raise Exception()
+
 	for doc_id, words in enumerate(words_for_doc):
 		print "topic", doc_id
 		print repr(words).decode("unicode-escape")
-		plot_words_for_each_document(words, args.output_dir, filename="word_for_doc_{}".format(doc_id))
+		plot_words_for_each_document(words, ndim, args.output_dir, filename="word_for_doc_{}".format(doc_id))
 
 
 	for i in xrange(ndim - 1):
@@ -86,5 +117,5 @@ def main(args):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-m", "--model-dir", type=str, default="out")
-	parser.add_argument("-o", "--output-dir", type=str, default="out")
+	parser.add_argument("-o", "--output-dir", type=str, default="out/plot")
 	main(parser.parse_args())

@@ -236,7 +236,17 @@ public:
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
 		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
 		int n_k = get_word_count_in_doc(word_id, doc_id);
-		log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+		// log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+		if(n_k > 10){
+			// n_k > 10の場合はlgammaを使った法が速い
+			log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+		}else{
+			double tmp = 0;
+			for(int i = 0;i < n_k;i++){
+				tmp += log(alpha_k + i);
+			}
+			log_pw += tmp;
+		}
 		return log_pw;
 	}
 	double _compute_reduced_log_Pdocument(id word_id, int doc_id){
