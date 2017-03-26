@@ -39,7 +39,7 @@ def main(args):
 			sys.stdout.flush()
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
-			print "PPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec"
+			print "\rPPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec"
 			print "MH acceptance:"
 			print "	document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector()
 			cstm.save(args.model_dir)

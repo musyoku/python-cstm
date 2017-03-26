@@ -111,6 +111,12 @@ def main(args):
 	for i in xrange(ndim):
 		print np.mean(doc_vectors[:, i]), np.std(doc_vectors[:, i])
 
+	for doc_id in xrange(cstm.get_num_documents()):
+		doc_vector = doc_vectors[doc_id]
+		f = np.inner(word_vectors, doc_vector)
+		print np.mean(f), np.std(f)
+
+	raise Exception()
 	
 	# for i in xrange(ndim - 1):
 	# 	plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
