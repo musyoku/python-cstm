@@ -16,7 +16,7 @@ def main(args):
 	assert os.path.exists(args.document_dir)
 	cstm = model.cstm()
 	cstm.set_ndim_d(args.ndim_vector)
-	
+
 	# 読み込み
 	filelist = os.listdir(args.document_dir)
 	filelist.sort()
@@ -34,6 +34,9 @@ def main(args):
 		cstm.perform_mh_sampling_document();
 		cstm.perform_mh_sampling_word();
 		itr += 1
+		if itr % 100 == 0:
+			sys.stdout.write("\r{}/{}".format(itr, 10000))
+			sys.stdout.flush()
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
 			print "PPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec"

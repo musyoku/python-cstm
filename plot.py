@@ -57,6 +57,20 @@ def plot_scatter_category(data_for_category, ndim, out_dir=None, filename="scatt
 			# pylab.ylim(-4, 4)
 			pylab.savefig("{}/{}_{}-{}.png".format(out_dir, filename, i, i + 1))
 
+def plot_words(words, ndim_vector, out_dir=None, filename="scatter"):
+	mkdir(out_dir)
+	with sns.axes_style("white", {"font.family": [fontfamily]}):
+		for i in xrange(ndim_vector - 1):
+			fig = pylab.gcf()
+			fig.set_size_inches(16.0, 16.0)
+			pylab.clf()
+			for meta in words:
+				word_id, word, count, vector = meta
+				pylab.text(vector[i], vector[i + 1], word)
+			pylab.xlim(-4, 4)
+			pylab.ylim(-4, 4)
+			pylab.savefig("{}/{}_{}-{}.png".format(out_dir, filename, i, i + 1))
+
 def plot_f(words, doc_vectors, out_dir=None, filename="f"):
 	with sns.axes_style("white", {"font.family": [fontfamily]}):
 		collection = []
@@ -98,11 +112,11 @@ def main(args):
 		print np.mean(doc_vectors[:, i]), np.std(doc_vectors[:, i])
 
 	
-	for i in xrange(ndim - 1):
-		plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
-		plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
-		plot_kde(doc_vectors[:,i:], args.output_dir, filename="doc_kde_{}-{}".format(i, i + 1))
-		plot_scatter(doc_vectors[:,i:], args.output_dir, filename="doc_scatter_{}-{}".format(i, i + 1))
+	# for i in xrange(ndim - 1):
+	# 	plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
+	# 	plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
+	# 	plot_kde(doc_vectors[:,i:], args.output_dir, filename="doc_kde_{}-{}".format(i, i + 1))
+	# 	plot_scatter(doc_vectors[:,i:], args.output_dir, filename="doc_scatter_{}-{}".format(i, i + 1))
 		
 
 	# 文書にカテゴリがある場合
@@ -110,15 +124,11 @@ def main(args):
 	doc_vectors_for_category = np.split(doc_vectors, num_sections)
 	plot_scatter_category(doc_vectors_for_category, ndim, args.output_dir, filename="doc_for_category")
 
-	common_words = cstm.get_high_freq_words(10000)
-	plot_f(common_words, doc_vectors, args.output_dir)
+	plot_words(words, ndim, args.output_dir, filename="words")
 	raise Exception()
 
-	for doc_id, words in enumerate(common_words):
-		print "topic", doc_id
-		print repr(words).decode("unicode-escape")
-		plot_words_for_each_document(words, ndim, args.output_dir, filename="word_for_doc_{}".format(doc_id))
-
+	common_words = cstm.get_high_freq_words(10000)
+	plot_f(common_words, doc_vectors, args.output_dir)
 
 
 if __name__ == "__main__":
