@@ -95,6 +95,7 @@ public:
 		_new_vec_copy = NULL;
 		_old_alpha_words = NULL;
 		_original_Zi = NULL;
+		_ndim_d = NDIM_D;
 		reset_statistics();
 		_compiled = false;
 		_random_sampling_start_index = 0;
@@ -129,7 +130,8 @@ public:
 			_random_word_ids.push_back(word_id);
 		}
 		// CSTM
-		_cstm = new CSTM(num_docs, num_vocabulary, _ndim_d);
+		_cstm = new CSTM(num_docs, num_vocabulary);
+		_cstm->set_ndim_d(_ndim_d);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			_cstm->add_document(doc_id);
 			vector<vector<id>> &dataset = _dataset[doc_id];

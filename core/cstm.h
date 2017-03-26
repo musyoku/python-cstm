@@ -48,8 +48,8 @@ public:
 		_log_likelihood_first_term = NULL;
 		_tmp_vec = NULL;
 	}
-	CSTM(int num_documents, int num_vocabulary, int ndim_d){
-		_ndim_d = ndim_d;
+	CSTM(int num_documents, int num_vocabulary){
+		_ndim_d = NDIM_D;
 		_sigma_u = SIGMA_U;
 		_sigma_phi = SIGMA_PHI;
 		_sigma_alpha = SIGMA_ALPHA;
@@ -487,6 +487,9 @@ public:
 	double get_Zi(int doc_id){
 		assert(doc_id < _num_documents);
 		return _Zi[doc_id];
+	}
+	void set_ndim_d(int ndim_d){
+		_ndim_d = ndim_d;
 	}
 	void set_alpha0(double alpha0){
 		_alpha0 = alpha0;
