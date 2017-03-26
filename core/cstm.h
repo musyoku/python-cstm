@@ -168,12 +168,12 @@ public:
 		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
 			double log_pw = 0;
 			for(int i = 2;i <= _sum_n_k[doc_id];i++){
-				log_pw += std::log(i);
+				log_pw += log(i);
 			}
 			int* count = _n_k[doc_id];
 			for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 				for(int i = 2;i <= count[word_id];i++){
-					log_pw -= std::log(i);
+					log_pw -= log(i);
 				}
 			}
 			_log_likelihood_first_term[doc_id] = log_pw;
@@ -255,7 +255,7 @@ public:
 		}else{
 			double tmp = 0;
 			for(int i = 0;i < n_k;i++){
-				tmp += std::log(alpha_k + i);
+				tmp += log(alpha_k + i);
 			}
 			log_pw += tmp;
 		}
@@ -324,7 +324,7 @@ public:
 			}else{
 				double tmp = 0;
 				for(int i = 0;i < n_k;i++){
-					tmp += std::log(alpha_k + i);
+					tmp += log(alpha_k + i);
 				}
 				log_pw += tmp;
 			}
@@ -436,7 +436,7 @@ public:
 		return log_pw;
 	}
 	double compute_log_prior_alpha0(double alpha0){
-		return _gamma_alpha_a * std::log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * std::log(alpha0) - _gamma_alpha_b * alpha0;
+		return _gamma_alpha_a * log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * log(alpha0) - _gamma_alpha_b * alpha0;
 	}
 	double compute_log_Pvector_doc(double* new_vec, double* old_vec){
 		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_u);
@@ -445,7 +445,7 @@ public:
 		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_phi);
 	}
 	double _compute_log_Pvector_given_sigma(double* new_vec, double* old_vec, double sigma){
-		double log_pvec = (double)_ndim_d * std::log(1.0 / (sqrt(2.0 * PI) * sigma));
+		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI) * sigma));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= (new_vec[i] - old_vec[i]) * (new_vec[i] - old_vec[i]) / (2.0 * sigma * sigma);		
 		}
@@ -455,7 +455,7 @@ public:
 		return _compute_log_prior_vector(vec);
 	}
 	double _compute_log_prior_vector(double* new_vec){
-		double log_pvec = (double)_ndim_d * std::log(1.0 / (sqrt(2.0 * PI)));
+		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI)));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= new_vec[i] * new_vec[i] * 0.5;
 		}
