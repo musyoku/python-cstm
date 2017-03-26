@@ -1,3 +1,4 @@
+#include <boost/format.hpp>
 #include <set>
 #include <chrono>
 #include <unordered_map>
@@ -12,10 +13,24 @@ void test1(){
 	string dirname = "out";
 	PyCSTM* model = new PyCSTM();
 	int doc_id;
-	doc_id = model->add_document("./documents/geforce.txt_0.txt");
-	doc_id = model->add_document("./documents/geforce.txt_1.txt");
-	doc_id = model->add_document("./documents/geforce.txt_2.txt");
-	model->set_ndim_d(10);
+	string filenames[] = {
+		"geforce",
+		"gochiusa",
+		"imas",
+		"kemono",
+		"macbook",
+		"monst",
+		"pad",
+		"tekketsu",
+		"win10"
+	};
+	for(int n = 0;n < 9;n++){
+		for(int i = 0;i < 100;i++){
+			string filename = (boost::format("%s/%s.txt_%d.txt") % "./documents" % filenames[n] % i).str();
+			doc_id = model->add_document(filename);
+		}
+	}
+	model->set_ndim_d(3);
 	model->compile();
 	int num_docs = model->get_num_documents();
 	int num_words = model->get_num_vocabulary();
@@ -27,24 +42,26 @@ void test1(){
 	for(int i = 1;i < 5000000;i++){
 		model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
-		if((i * (int)(num_words / (double)num_docs)) % num_words == 0){
-			model->perform_mh_sampling_alpha0();
-		}
+		// if((i * (int)(num_words / (double)num_docs)) % num_words == 0){
+		// 	model->perform_mh_sampling_alpha0();
+		// }
 		// if(i % 100 == 0){
 		// }
 		// double ppl_train = model->compute_perplexity_train();
 		// double ppl_test = model->compute_perplexity_test();
 		// cout << i << " PPL: " << ppl_train << endl;
 		// model->_vocab->dump();
-		cout << "\r" << (i % 500) << " / " << 500 << flush;
-		if(i % 500 == 0){
+		if(i % 100 == 0){
+			cout << "\r" << (i % 10000) << " / " << 10000 << flush;
+		}
+		if(i % 10000 == 0){
 			// for(id word_id = 0;word_id < model->get_num_vocabulary();word_id++){
 			// 	wstring word = model->_vocab->word_id_to_string(word_id);
 			// 	double* vec = model->get_word_vector(word_id);
 			// 	// wcout << word << endl;
 			// 	// dump_vec(vec, model->_cstm->_ndim_d);
 			// }
-			cout << "\rEpoch " << i / 500 << " PPL: " << model->compute_perplexity() << endl;
+			cout << "\rEpoch " << i / 10000 << " PPL: " << model->compute_perplexity() << endl;
 			cout << model->_num_acceptance_doc / (double)(model->_num_acceptance_doc + model->_num_rejection_doc) << ", ";
 			cout << model->_num_acceptance_word / (double)(model->_num_acceptance_word + model->_num_rejection_word) << ", ";
 			cout << model->_num_acceptance_alpha0 / (double)(model->_num_acceptance_alpha0 + model->_num_rejection_alpha0) << endl;
@@ -321,7 +338,7 @@ void test9(){
 }
 
 int main(int argc, char *argv[]){
-	test9();
+	// test9();
 	// test5();
 	// test6();
 	// test3();

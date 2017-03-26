@@ -10,6 +10,7 @@
 #include <random>
 #include <fstream>
 #include "common.h"
+#include "fmath.h"
 #include "sampler.h"
 using namespace std;
 #define PI 3.14159265358979323846	// 直書き
@@ -167,12 +168,12 @@ public:
 		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
 			double log_pw = 0;
 			for(int i = 2;i <= _sum_n_k[doc_id];i++){
-				log_pw += log(i);
+				log_pw += std::log(i);
 			}
 			int* count = _n_k[doc_id];
 			for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 				for(int i = 2;i <= count[word_id];i++){
-					log_pw -= log(i);
+					log_pw -= std::log(i);
 				}
 			}
 			_log_likelihood_first_term[doc_id] = log_pw;
@@ -217,7 +218,7 @@ public:
 	}
 	double draw_alpha0(double old_alpha0){
 		double z = _noise_alpha0(Sampler::minstd);
-		return old_alpha0 * exp(z);
+		return old_alpha0 * fmath::expd(z);
 	}
 	double sum_alpha_word_given_doc(int doc_id, unordered_set<id> &word_set){
 		assert(doc_id < _num_documents);
@@ -235,7 +236,7 @@ public:
 		double* doc_vec = _doc_vectors[doc_id];
 		double f = compute_dot(word_vec, doc_vec, _ndim_d);
 		double g0 = get_g0_of_word(word_id);
-		double alpha = _alpha0 * g0 * exp(f);
+		double alpha = _alpha0 * g0 * fmath::expd(f);
 		assert(alpha > 0);
 		return alpha;
 	}
@@ -254,7 +255,7 @@ public:
 		}else{
 			double tmp = 0;
 			for(int i = 0;i < n_k;i++){
-				tmp += log(alpha_k + i);
+				tmp += std::log(alpha_k + i);
 			}
 			log_pw += tmp;
 		}
@@ -323,7 +324,7 @@ public:
 			}else{
 				double tmp = 0;
 				for(int i = 0;i < n_k;i++){
-					tmp += log(alpha_k + i);
+					tmp += std::log(alpha_k + i);
 				}
 				log_pw += tmp;
 			}
@@ -354,7 +355,7 @@ public:
 		//
 		//
 		//
-		// cout << "	" << "pw: " << exp(log_pw) << endl;
+		// cout << "	" << "pw: " << fmath::expd(log_pw) << endl;
 		return log_pw;
 	}
 	double _compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
@@ -431,11 +432,11 @@ public:
 		//
 		//
 		//
-		// cout << "	" << "pw: " << exp(log_pw) << endl;
+		// cout << "	" << "pw: " << fmath::expd(log_pw) << endl;
 		return log_pw;
 	}
 	double compute_log_prior_alpha0(double alpha0){
-		return _gamma_alpha_a * log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * log(alpha0) - _gamma_alpha_b * alpha0;
+		return _gamma_alpha_a * std::log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * std::log(alpha0) - _gamma_alpha_b * alpha0;
 	}
 	double compute_log_Pvector_doc(double* new_vec, double* old_vec){
 		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_u);
@@ -444,7 +445,7 @@ public:
 		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_phi);
 	}
 	double _compute_log_Pvector_given_sigma(double* new_vec, double* old_vec, double sigma){
-		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI) * sigma));
+		double log_pvec = (double)_ndim_d * std::log(1.0 / (sqrt(2.0 * PI) * sigma));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= (new_vec[i] - old_vec[i]) * (new_vec[i] - old_vec[i]) / (2.0 * sigma * sigma);		
 		}
@@ -454,7 +455,7 @@ public:
 		return _compute_log_prior_vector(vec);
 	}
 	double _compute_log_prior_vector(double* new_vec){
-		double log_pvec = (double)_ndim_d * log(1.0 / (sqrt(2.0 * PI)));
+		double log_pvec = (double)_ndim_d * std::log(1.0 / (sqrt(2.0 * PI)));
 		for(int i = 0;i < _ndim_d;i++){
 			log_pvec -= new_vec[i] * new_vec[i] * 0.5;
 		}

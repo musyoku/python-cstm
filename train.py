@@ -19,8 +19,8 @@ def main(args):
 	cstm.set_sigma_u(0.01)
 	cstm.set_sigma_phi(0.02)
 	cstm.set_sigma_phi(0.2)
-	cstm.set_gamma_alpha_a(1)
-	cstm.set_gamma_alpha_b(10)
+	cstm.set_gamma_alpha_a(10)
+	cstm.set_gamma_alpha_b(1)
 
 	# 読み込み
 	filelist = os.listdir(args.document_dir)

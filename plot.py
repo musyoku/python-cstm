@@ -86,7 +86,7 @@ def plot_f(words, doc_vectors, out_dir=None, filename="f"):
 				word, word_vector = meta
 				f = np.inner(word_vector, doc_vector)
 				y = np.random.uniform(low=-5, high=5)
-				pylab.text(f, y, word, fontsize=2)
+				pylab.text(f, y, word, fontsize=5)
 			pylab.xlim(-20, 20)
 			pylab.ylim(-5, 5)
 			pylab.savefig("{}/{}_{}.png".format(out_dir, filename, doc_id))
@@ -131,7 +131,6 @@ def main(args):
 	common_words = cstm.get_high_freq_words(10000)
 	plot_words(common_words, ndim, args.output_dir, filename="words")
 
-	raise Exception()
 	plot_f(common_words, doc_vectors, args.output_dir)
 	raise Exception()
 
