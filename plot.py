@@ -62,11 +62,11 @@ def plot_words(words, ndim_vector, out_dir=None, filename="scatter"):
 	with sns.axes_style("white", {"font.family": [fontfamily]}):
 		for i in xrange(ndim_vector - 1):
 			fig = pylab.gcf()
-			fig.set_size_inches(16.0, 16.0)
+			fig.set_size_inches(45.0, 45.0)
 			pylab.clf()
 			for meta in words:
 				word_id, word, count, vector = meta
-				pylab.text(vector[i], vector[i + 1], word)
+				pylab.text(vector[i], vector[i + 1], word, fontsize=5)
 			pylab.xlim(-4, 4)
 			pylab.ylim(-4, 4)
 			pylab.savefig("{}/{}_{}-{}.png".format(out_dir, filename, i, i + 1))
@@ -98,7 +98,7 @@ def main(args):
 		pass
 	assert os.path.exists(args.model_dir)
 	cstm = model.cstm()
-	assert cstm.load_model(args.model_dir) == True
+	assert cstm.load(args.model_dir) == True
 	print cstm.get_num_vocabulary(), "words"
 	word_vectors = np.asarray(cstm.get_word_vectors(), dtype=np.float32)
 	doc_vectors = np.asarray(cstm.get_doc_vectors(), dtype=np.float32)

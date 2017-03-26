@@ -78,7 +78,6 @@ public:
 	// サンプリング回数
 	int _num_word_vec_sampled;
 	int _num_doc_vec_sampled;
-	int _ndim_d;
 	// その他
 	int _random_sampling_start_index;
 	PyCSTM(){
@@ -97,7 +96,6 @@ public:
 		_original_Zi = NULL;
 		reset_statistics();
 		_compiled = false;
-		_ndim_d = 20;
 		_random_sampling_start_index = 0;
 	}
 	~PyCSTM(){
@@ -119,18 +117,18 @@ public:
 		}
 	}
 	void compile(){
-		assert(_ndim_d > 0);
+		assert(_cstm->_ndim_d > 0);
 		assert(_compiled == false);
 		int num_docs = _dataset.size();
 		int num_vocabulary = _word_frequency.size();
-		_old_vec_copy = new double[_ndim_d];
-		_new_vec_copy = new double[_ndim_d];
+		_old_vec_copy = new double[_cstm->_ndim_d];
+		_new_vec_copy = new double[_cstm->_ndim_d];
 		// 単語のランダムサンプリング用
 		for(id word_id = 0;word_id < num_vocabulary;word_id++){
 			_random_word_ids.push_back(word_id);
 		}
 		// CSTM
-		_cstm = new CSTM(num_docs, num_vocabulary, _ndim_d);
+		_cstm = new CSTM(num_docs, num_vocabulary, _cstm->_ndim_d);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			_cstm->add_document(doc_id);
 			vector<vector<id>> &dataset = _dataset[doc_id];
@@ -211,7 +209,7 @@ public:
 		return _cstm->_num_vocabulary;
 	}
 	int get_ndim_vector(){
-		return _ndim_d;
+		return _cstm->_ndim_d;
 	}
 	int get_sum_word_frequency(){
 		return std::accumulate(_sum_word_frequency.begin(), _sum_word_frequency.end(), 0);
@@ -233,30 +231,30 @@ public:
 	}
 	double* get_word_vector(id word_id){
 		double* old_vec = _cstm->get_word_vector(word_id);
-		std::memcpy(_old_vec_copy, old_vec, _ndim_d * sizeof(double));
+		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
 		return _old_vec_copy;
 	}
 	double* get_doc_vector(int doc_id){
 		double* old_vec = _cstm->get_doc_vector(doc_id);
-		std::memcpy(_old_vec_copy, old_vec, _ndim_d * sizeof(double));
+		std::memcpy(_old_vec_copy, old_vec, _cstm->_ndim_d * sizeof(double));
 		return _old_vec_copy;
 	}
 	double* draw_word_vector(double* old_vec){
 		double* new_vec = _cstm->draw_word_vector(old_vec);
-		std::memcpy(_new_vec_copy, new_vec, _ndim_d * sizeof(double));
+		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
 	double* draw_doc_vector(double* old_vec){
 		double* new_vec = _cstm->draw_doc_vector(old_vec);
-		std::memcpy(_new_vec_copy, new_vec, _ndim_d * sizeof(double));
+		std::memcpy(_new_vec_copy, new_vec, _cstm->_ndim_d * sizeof(double));
 		return _new_vec_copy;
 	}
 	void set_ndim_d(int ndim_d){
-		_ndim_d = ndim_d;
+		_cstm->_ndim_d = ndim_d;
 	}
 	python::list convert_vector_to_list(double* vector){
 		python::list vector_list;
-		for(int i = 0;i < _ndim_d;i++){
+		for(int i = 0;i < _cstm->_ndim_d;i++){
 			vector_list.append(vector[i]);
 		}
 		return vector_list;
@@ -275,7 +273,7 @@ public:
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
 			python::list vector_list;
 			double* vector = get_doc_vector(doc_id);
-			for(int i = 0;i < _ndim_d;i++){
+			for(int i = 0;i < _cstm->_ndim_d;i++){
 				vector_list.append(vector[i]);
 			}
 			vector_array.append(vector_list);
@@ -409,8 +407,8 @@ public:
 		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
 		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
 		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
-		// dump_vec(old_vec, _ndim_d);
-		// dump_vec(new_vec, _ndim_d);
+		// dump_vec(old_vec, _cstm->_ndim_d);
+		// dump_vec(new_vec, _cstm->_ndim_d);
 
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		// double log_acceptance_rate = log_pw_new - log_pw_old;
@@ -535,40 +533,7 @@ public:
 		update_all_Zi();
 		return false;
 	}
-	template <class Archive>
-	void serialize(Archive& archive, unsigned int version)
-	{
-		archive & _dataset;
-		archive & _word_set;
-		archive & _sum_word_frequency;
-		archive & _random_word_ids;
-		archive & _docs_containing_word;
-		archive & _word_frequency;
-		archive & _ndim_d;
-	}
-	bool load_trainer(string dirname){
-		std::ifstream ifs(dirname + "/cstm.trainer");
-		if(ifs.good()){
-			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> *this;
-			if(_old_vec_copy == NULL){
-				_old_vec_copy = new double[_ndim_d];
-			}
-			if(_new_vec_copy == NULL){
-				_new_vec_copy = new double[_ndim_d];
-			}
-			int num_docs = _dataset.size();
-			if(_old_alpha_words == NULL){
-				_old_alpha_words = new double[num_docs];
-			}
-			if(_original_Zi == NULL){
-				_original_Zi = new double[num_docs];
-			}
-			_compiled = true;
-		}
-		return true;
-	}
-	bool load_model(string dirname){
+	bool load(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");
 		if(_cstm == NULL){
 			_cstm = new CSTM();
@@ -580,13 +545,14 @@ public:
 		if(_cstm == NULL){
 			return false;
 		}
+		int ndim_d = _cstm->_ndim_d;
 		if(_old_vec_copy == NULL){
-			_old_vec_copy = new double[_ndim_d];
+			_old_vec_copy = new double[ndim_d];
 		}
 		if(_new_vec_copy == NULL){
-			_new_vec_copy = new double[_ndim_d];
+			_new_vec_copy = new double[ndim_d];
 		}
-		int num_docs = _dataset.size();
+		int num_docs = _cstm->_num_documents;
 		if(_old_alpha_words == NULL){
 			_old_alpha_words = new double[num_docs];
 		}
@@ -598,9 +564,6 @@ public:
 	void save(string dirname){
 		_vocab->save(dirname + "/cstm.vocab");
 		_cstm->save(dirname + "/cstm.model");
-		std::ofstream ofs(dirname + "/cstm.trainer");
-		boost::archive::binary_oarchive oarchive(ofs);
-		oarchive << *this;
 	}
 };
 
@@ -627,7 +590,6 @@ BOOST_PYTHON_MODULE(model){
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
 	.def("compute_perplexity", &PyCSTM::compute_perplexity)
-	.def("load_trainer", &PyCSTM::load_trainer)
-	.def("load_model", &PyCSTM::load_model)
+	.def("load", &PyCSTM::load)
 	.def("save", &PyCSTM::save);
 }

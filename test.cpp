@@ -292,7 +292,7 @@ void test8(){
 void test9(){
 	string dirname = "./out/";
 	PyCSTM* model = new PyCSTM();
-	model->load(dirname);
+	assert(model->load(dirname) == true);
 	std::pair<id, double> pair;
 	multiset<std::pair<id, double>, multiset_value_comparator> ranking;
 	for(const auto &elem: model->_docs_containing_word){
