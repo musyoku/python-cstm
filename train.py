@@ -15,7 +15,7 @@ def main(args):
 	assert os.path.exists(args.model_dir)
 	assert os.path.exists(args.document_dir)
 	cstm = model.cstm()
-	cstm.set_ndim_d(args.ndim_vector)
+	cstm.set_ndim_d(args.ndim_d)
 
 	# 読み込み
 	filelist = os.listdir(args.document_dir)
@@ -61,5 +61,5 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-m", "--model-dir", type=str, default="out")
 	parser.add_argument("-t", "--document-dir", type=str, default="documents")
-	parser.add_argument("-d", "--ndim-vector", type=int, default=20)
+	parser.add_argument("-d", "--ndim-d", type=int, default=20)
 	main(parser.parse_args())

@@ -105,7 +105,7 @@ def main(args):
 	print doc_vectors
 	print word_vectors
 
-	ndim = cstm.get_ndim_vector()
+	ndim = cstm.get_ndim_d()
 	for i in xrange(ndim):
 		print np.mean(word_vectors[:, i]), np.std(word_vectors[:, i])
 	for i in xrange(ndim):
@@ -116,6 +116,7 @@ def main(args):
 		f = np.inner(word_vectors, doc_vector)
 		print np.mean(f), np.std(f)
 
+	raise Exception()
 	# for i in xrange(ndim - 1):
 	# 	plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
 	# 	plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))

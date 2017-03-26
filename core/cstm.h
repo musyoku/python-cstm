@@ -38,7 +38,15 @@ public:
 	normal_distribution<double> _noise_word;
 	normal_distribution<double> _noise_doc;
 	normal_distribution<double> _noise_alpha0;
+	bool _initialized;
+	bool _compiled;
 	CSTM(){
+		_ndim_d = NDIM_D;
+		_sigma_u = SIGMA_U;
+		_sigma_phi = SIGMA_PHI;
+		_sigma_alpha = SIGMA_ALPHA;
+		_gamma_alpha_a = GAMMA_ALPHA_A;
+		_gamma_alpha_b = GAMMA_ALPHA_B;
 		_g0 = NULL;
 		_word_vectors = NULL;
 		_doc_vectors = NULL;
@@ -47,40 +55,15 @@ public:
 		_Zi = NULL;
 		_log_likelihood_first_term = NULL;
 		_tmp_vec = NULL;
-	}
-	CSTM(int num_documents, int num_vocabulary){
-		_ndim_d = NDIM_D;
-		_sigma_u = SIGMA_U;
-		_sigma_phi = SIGMA_PHI;
-		_sigma_alpha = SIGMA_ALPHA;
-		_gamma_alpha_a = GAMMA_ALPHA_A;
-		_gamma_alpha_b = GAMMA_ALPHA_B;
-		_num_vocabulary = num_vocabulary;
-		_num_documents = num_documents;
+		_num_vocabulary = 0;
+		_num_documents = 0;
+		_sum_word_frequency = 0;
+		_initialized = false;
+		_compiled = false;
 		_standard_normal_distribution = normal_distribution<double>(0, 1);
 		_noise_word = normal_distribution<double>(0, _sigma_u);
 		_noise_doc = normal_distribution<double>(0, _sigma_phi);
 		_noise_alpha0 = normal_distribution<double>(0, _sigma_alpha);
-		_sum_word_frequency = 0;
-		_tmp_vec = generate_vector();
-		_g0 = new double[_num_vocabulary];
-		_word_vectors = new double*[_num_vocabulary];
-		_doc_vectors = new double*[_num_documents];
-		_n_k = new int*[_num_documents];
-		_sum_n_k = new int[_num_documents];
-		_Zi = new double[_num_documents];
-		_log_likelihood_first_term = new double[_num_documents];
-		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
-			_word_vectors[word_id] = NULL;
-		}
-		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
-			_doc_vectors[doc_id] = NULL;
-			_n_k[doc_id] = new int[_num_vocabulary];
-			_Zi[doc_id] = 0;
-			for(id word_id = 0;word_id < _num_vocabulary;word_id++){
-				_n_k[doc_id][word_id] = 0;
-			}
-		}
 	}
 	~CSTM(){
 		if(_word_vectors != NULL){
@@ -119,12 +102,45 @@ public:
 			delete[] _log_likelihood_first_term;
 		}
 	}
-	void compile(){
+	void init(){
+		assert(_initialized == false);
+		assert(_compiled == false);
+		assert(_num_documents > 0);
+		assert(_num_vocabulary > 0);
+		// ハイパーパラメータ
 		_alpha0 = Sampler::gamma(_gamma_alpha_a, _gamma_alpha_b);
+		assert(_alpha0 > 0);
+		// メモリ確保
+		_tmp_vec = generate_vector();
+		_g0 = new double[_num_vocabulary];
+		_word_vectors = new double*[_num_vocabulary];
+		_doc_vectors = new double*[_num_documents];
+		_n_k = new int*[_num_documents];
+		_sum_n_k = new int[_num_documents];
+		_Zi = new double[_num_documents];
+		_log_likelihood_first_term = new double[_num_documents];
+		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
+			_word_vectors[word_id] = generate_vector();
+		}
+		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+			_doc_vectors[doc_id] = generate_vector();
+			_n_k[doc_id] = new int[_num_vocabulary];
+			_Zi[doc_id] = 0;
+			for(id word_id = 0;word_id < _num_vocabulary;word_id++){
+				_n_k[doc_id][word_id] = 0;
+			}
+		}
+		_initialized = true;
+	}
+	void compile(){
+		assert(_initialized == true);
+		assert(_compiled == false);
+		assert(_num_documents > 0);
+		assert(_num_vocabulary > 0);
 		assert(_sigma_u > 0);
 		assert(_sigma_phi > 0);
 		assert(_sigma_alpha > 0);
-		assert(_alpha0 > 0);
+		// 基底分布
 		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			double sum_count = 0;
 			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
@@ -161,6 +177,7 @@ public:
 			}
 			_log_likelihood_first_term[doc_id] = log_pw;
 		}
+		_compiled = true;
 	}
 	void add_word(id word_id, int doc_id){
 		assert(doc_id < _num_documents);
@@ -169,20 +186,6 @@ public:
 		int* count = _n_k[doc_id];
 		count[word_id] += 1;
 		_sum_word_frequency += 1;
-		// 単語ベクトルを必要なら生成
-		if(_word_vectors[word_id] != NULL){
-			return;
-		}
-		double* word_vec = generate_vector();
-		_word_vectors[word_id] = word_vec;
-	}
-	void add_document(int doc_id){
-		assert(doc_id < _num_documents);
-		if(_doc_vectors[doc_id] != NULL){
-			return;
-		}
-		double* doc_vec = generate_vector();
-		_doc_vectors[doc_id] = doc_vec;
 	}
 	double generate_noise_from_standard_normal_distribution(){
 		return _standard_normal_distribution(Sampler::minstd);
@@ -509,6 +512,12 @@ public:
 	void set_gamma_alpha_b(double gamma_alpha_b){
 		_gamma_alpha_b = gamma_alpha_b;
 	}
+	void set_num_documents(int num_documents){
+		_num_documents = num_documents;
+	}
+	void set_num_vocabulary(int num_vocabulary){
+		_num_vocabulary = num_vocabulary;
+	}
 	void set_word_vector(id word_id, double* source){
 		assert(word_id < _num_vocabulary);
 		double* target = _word_vectors[word_id];
@@ -577,29 +586,35 @@ void save(Archive &archive, const CSTM &cstm, unsigned int version) {
 	archive & cstm._sigma_phi;
 	archive & cstm._sigma_alpha;
 	archive & cstm._alpha0;
-	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-		archive & cstm._Zi[doc_id];
-		archive & cstm._sum_n_k[doc_id];
-		archive & cstm._log_likelihood_first_term[doc_id];
-	}
-	for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-		archive & cstm._g0[word_id];
-	}
-	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+	archive & cstm._initialized;
+	archive & cstm._compiled;
+	if(cstm._initialized){
+		for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+			archive & cstm._Zi[doc_id];
+			archive & cstm._sum_n_k[doc_id];
+			archive & cstm._log_likelihood_first_term[doc_id];
+		}
+		for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+			for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
+				archive & cstm._n_k[doc_id][word_id];
+			}
+		}
+		for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+			double* vec = cstm._doc_vectors[doc_id];
+			for(int i = 0;i < cstm._ndim_d;i++){
+				archive & vec[i];
+			}
+		}
 		for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-			archive & cstm._n_k[doc_id][word_id];
+			double* vec = cstm._word_vectors[word_id];
+			for(int i = 0;i < cstm._ndim_d;i++){
+				archive & vec[i];
+			}
 		}
 	}
-	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-		double* vec = cstm._doc_vectors[doc_id];
-		for(int i = 0;i < cstm._ndim_d;i++){
-			archive & vec[i];
-		}
-	}
-	for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-		double* vec = cstm._word_vectors[word_id];
-		for(int i = 0;i < cstm._ndim_d;i++){
-			archive & vec[i];
+	if(cstm._compiled){
+		for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
+			archive & cstm._g0[word_id];
 		}
 	}
 }
@@ -613,60 +628,66 @@ void load(Archive &archive, CSTM &cstm, unsigned int version) {
 	archive & cstm._sigma_phi;
 	archive & cstm._sigma_alpha;
 	archive & cstm._alpha0;
+	archive & cstm._initialized;
+	archive & cstm._compiled;
+	if(cstm._initialized){
+		if(cstm._word_vectors == NULL){
+			cstm._word_vectors = new double*[cstm._num_vocabulary];
+			for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
+				cstm._word_vectors[word_id] = new double[cstm._ndim_d];
+			}
+		}
+		if(cstm._doc_vectors == NULL){
+			cstm._doc_vectors = new double*[cstm._num_documents];
+			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+				cstm._doc_vectors[doc_id] = new double[cstm._ndim_d];
+			}
+		}
+		if(cstm._n_k == NULL){
+			cstm._n_k = new int*[cstm._num_documents];
+			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+				cstm._n_k[doc_id] = new int[cstm._num_vocabulary];
+			}
+		}
+		if(cstm._sum_n_k == NULL){
+			cstm._sum_n_k = new int[cstm._num_documents];
+		}
+		if(cstm._Zi == NULL){
+			cstm._Zi = new double[cstm._num_documents];
+		}
+		if(cstm._log_likelihood_first_term == NULL){
+			cstm._log_likelihood_first_term = new double[cstm._num_documents];
+		}
 
-	if(cstm._g0 == NULL){
-		cstm._g0 = new double[cstm._num_vocabulary];
-	}
-	if(cstm._word_vectors == NULL){
-		cstm._word_vectors = new double*[cstm._num_vocabulary];
-		for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-			cstm._word_vectors[word_id] = new double[cstm._ndim_d];
-		}
-	}
-	if(cstm._doc_vectors == NULL){
-		cstm._doc_vectors = new double*[cstm._num_documents];
 		for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-			cstm._doc_vectors[doc_id] = new double[cstm._ndim_d];
+			archive & cstm._Zi[doc_id];
+			archive & cstm._sum_n_k[doc_id];
+			archive & cstm._log_likelihood_first_term[doc_id];
 		}
-	}
-	if(cstm._n_k == NULL){
-		cstm._n_k = new int*[cstm._num_documents];
 		for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-			cstm._n_k[doc_id] = new int[cstm._num_vocabulary];
+			for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
+				archive & cstm._n_k[doc_id][word_id];
+			}
 		}
-	}
-	if(cstm._sum_n_k == NULL){
-		cstm._sum_n_k = new int[cstm._num_documents];
-	}
-	if(cstm._Zi == NULL){
-		cstm._Zi = new double[cstm._num_documents];
-	}
-	if(cstm._log_likelihood_first_term == NULL){
-		cstm._log_likelihood_first_term = new double[cstm._num_documents];
-	}
-	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-		archive & cstm._Zi[doc_id];
-		archive & cstm._sum_n_k[doc_id];
-		archive & cstm._log_likelihood_first_term[doc_id];
-	}
-	for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-		archive & cstm._g0[word_id];
-	}
-	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+		for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+			double* vec = cstm._doc_vectors[doc_id];
+			for(int i = 0;i < cstm._ndim_d;i++){
+				archive & vec[i];
+			}
+		}
 		for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-			archive & cstm._n_k[doc_id][word_id];
+			double* vec = cstm._word_vectors[word_id];
+			for(int i = 0;i < cstm._ndim_d;i++){
+				archive & vec[i];
+			}
 		}
 	}
-	for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-		double* vec = cstm._doc_vectors[doc_id];
-		for(int i = 0;i < cstm._ndim_d;i++){
-			archive & vec[i];
+	if(cstm._compiled){
+		if(cstm._g0 == NULL){
+			cstm._g0 = new double[cstm._num_vocabulary];
 		}
-	}
-	for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
-		double* vec = cstm._word_vectors[word_id];
-		for(int i = 0;i < cstm._ndim_d;i++){
-			archive & vec[i];
+		for(id word_id = 0;word_id < cstm._num_vocabulary;word_id++){
+			archive & cstm._g0[word_id];
 		}
 	}
 }

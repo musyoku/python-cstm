@@ -66,7 +66,7 @@ public:
 	double* _old_alpha_words;
 	double* _original_Zi;
 	bool _compiled;
-	bool _ndim_d;
+	int _ndim_d;
 	// 統計
 	// MH法で採択された回数
 	int _num_acceptance_doc;
@@ -89,21 +89,19 @@ public:
 		locale ctype_default(locale::classic(), default_loc, locale::ctype); //※
 		wcout.imbue(ctype_default);
 		wcin.imbue(ctype_default);
-		_cstm = NULL;
+		_cstm = new CSTM();
 		_vocab = new Vocab();
 		_old_vec_copy = NULL;
 		_new_vec_copy = NULL;
 		_old_alpha_words = NULL;
 		_original_Zi = NULL;
-		_ndim_d = NDIM_D;
+		_ndim_d = 0;
 		reset_statistics();
 		_compiled = false;
 		_random_sampling_start_index = 0;
 	}
 	~PyCSTM(){
-		if(_cstm != NULL){
-			delete _cstm;
-		}
+		delete _cstm;
 		delete _vocab;
 		if(_old_vec_copy != NULL){
 			delete[] _old_vec_copy;
@@ -130,10 +128,11 @@ public:
 			_random_word_ids.push_back(word_id);
 		}
 		// CSTM
-		_cstm = new CSTM(num_docs, num_vocabulary);
 		_cstm->set_ndim_d(_ndim_d);
+		_cstm->set_num_documents(num_docs);
+		_cstm->set_num_vocabulary(num_vocabulary);
+		_cstm->init();
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
-			_cstm->add_document(doc_id);
 			vector<vector<id>> &dataset = _dataset[doc_id];
 			for(int data_index = 0;data_index < dataset.size();data_index++){
 				vector<id> &word_ids = dataset[data_index];
@@ -143,6 +142,7 @@ public:
 			}
 		}
 		_cstm->compile();
+		assert(_ndim_d == _cstm->_ndim_d);
 		// Zi
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			unordered_set<id> &word_set = _word_set[doc_id];
@@ -211,7 +211,7 @@ public:
 	int get_num_vocabulary(){
 		return _cstm->_num_vocabulary;
 	}
-	int get_ndim_vector(){
+	int get_ndim_d(){
 		return _cstm->_ndim_d;
 	}
 	int get_sum_word_frequency(){
@@ -538,14 +538,7 @@ public:
 	}
 	bool load(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");
-		if(_cstm == NULL){
-			_cstm = new CSTM();
-		}
 		if(_cstm->load(dirname + "/cstm.model") == false){
-			delete _cstm;
-			_cstm = NULL;
-		}
-		if(_cstm == NULL){
 			return false;
 		}
 		_ndim_d = _cstm->_ndim_d;
@@ -579,7 +572,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_num_vocabulary", &PyCSTM::get_num_vocabulary)
 	.def("get_num_documents", &PyCSTM::get_num_documents)
 	.def("get_sum_word_frequency", &PyCSTM::get_sum_word_frequency)
-	.def("get_ndim_vector", &PyCSTM::get_ndim_vector)
+	.def("get_ndim_d", &PyCSTM::get_ndim_d)
 	.def("get_word_vectors", &PyCSTM::get_word_vectors)
 	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
 	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
