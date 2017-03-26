@@ -124,10 +124,10 @@ def main(args):
 	doc_vectors_for_category = np.split(doc_vectors, num_sections)
 	plot_scatter_category(doc_vectors_for_category, ndim, args.output_dir, filename="doc_for_category")
 
-	plot_words(words, ndim, args.output_dir, filename="words")
+	common_words = cstm.get_high_freq_words(10000)
+	plot_words(common_words, ndim, args.output_dir, filename="words")
 	raise Exception()
 
-	common_words = cstm.get_high_freq_words(10000)
 	plot_f(common_words, doc_vectors, args.output_dir)
 
 
