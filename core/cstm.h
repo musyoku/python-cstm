@@ -61,8 +61,8 @@ public:
 		_initialized = false;
 		_compiled = false;
 		_standard_normal_distribution = normal_distribution<double>(0, 1);
-		_noise_word = normal_distribution<double>(0, _sigma_u);
-		_noise_doc = normal_distribution<double>(0, _sigma_phi);
+		_noise_word = normal_distribution<double>(0, _sigma_phi);
+		_noise_doc = normal_distribution<double>(0, _sigma_u);
 		_noise_alpha0 = normal_distribution<double>(0, _sigma_alpha);
 	}
 	~CSTM(){

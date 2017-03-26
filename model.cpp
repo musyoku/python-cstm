@@ -266,6 +266,24 @@ public:
 	void set_ndim_d(int ndim_d){
 		_ndim_d = ndim_d;
 	}
+	void set_alpha0(double alpha0){
+		_cstm->_alpha0 = alpha0;
+	}
+	void set_sigma_u(double sigma_u){
+		_cstm->_sigma_u = sigma_u;
+	}
+	void set_sigma_phi(double sigma_phi){
+		_cstm->_sigma_phi = sigma_phi;
+	}
+	void set_sigma_alpha(double sigma_alpha){
+		_cstm->_sigma_alpha = sigma_alpha;
+	}
+	void set_gamma_alpha_a(double gamma_alpha_a){
+		_cstm->_gamma_alpha_a = gamma_alpha_a;
+	}
+	void set_gamma_alpha_b(double gamma_alpha_b){
+		_cstm->_gamma_alpha_b = gamma_alpha_b;
+	}
 	python::list convert_vector_to_list(double* vector){
 		python::list vector_list;
 		for(int i = 0;i < _cstm->_ndim_d;i++){
@@ -629,6 +647,12 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_num_word_vec_sampled", &PyCSTM::get_num_word_vec_sampled)
 	.def("get_alpha0", &PyCSTM::get_alpha0)
 	.def("set_ndim_d", &PyCSTM::set_ndim_d)
+	.def("set_alpha0", &PyCSTM::set_alpha0)
+	.def("set_sigma_u", &PyCSTM::set_sigma_u)
+	.def("set_sigma_phi", &PyCSTM::set_sigma_phi)
+	.def("set_sigma_phi", &PyCSTM::set_sigma_phi)
+	.def("set_gamma_alpha_a", &PyCSTM::set_gamma_alpha_a)
+	.def("set_gamma_alpha_b", &PyCSTM::set_gamma_alpha_b)
 	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)

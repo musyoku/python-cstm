@@ -16,6 +16,11 @@ def main(args):
 	assert os.path.exists(args.document_dir)
 	cstm = model.cstm()
 	cstm.set_ndim_d(args.ndim_d)
+	cstm.set_sigma_u(0.01)
+	cstm.set_sigma_phi(0.02)
+	cstm.set_sigma_phi(0.2)
+	cstm.set_gamma_alpha_a(1)
+	cstm.set_gamma_alpha_b(10)
 
 	# 読み込み
 	filelist = os.listdir(args.document_dir)
@@ -37,7 +42,7 @@ def main(args):
 		# MH法
 		cstm.perform_mh_sampling_document();
 		cstm.perform_mh_sampling_word();
-		# if itr % 100 == 0:
+		# if itr % 1000 == 0:
 		# 	cstm.perform_mh_sampling_alpha0()	# alpha0は頻繁に更新しない
 
 		itr += 1
@@ -53,6 +58,7 @@ def main(args):
 			print "	alpha0:", cstm.get_alpha0()
 			cstm.save(args.model_dir)
 			cstm.reset_statistics()
+			total_time += elapsed_time
 			start_time = time.time()
 			itr = 0
 			epoch += 1
