@@ -548,12 +548,12 @@ public:
 		if(_cstm == NULL){
 			return false;
 		}
-		int ndim_d = _cstm->_ndim_d;
+		_ndim_d = _cstm->_ndim_d;
 		if(_old_vec_copy == NULL){
-			_old_vec_copy = new double[ndim_d];
+			_old_vec_copy = new double[_ndim_d];
 		}
 		if(_new_vec_copy == NULL){
-			_new_vec_copy = new double[ndim_d];
+			_new_vec_copy = new double[_ndim_d];
 		}
 		int num_docs = _cstm->_num_documents;
 		if(_old_alpha_words == NULL){
