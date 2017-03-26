@@ -66,6 +66,7 @@ public:
 	double* _old_alpha_words;
 	double* _original_Zi;
 	bool _compiled;
+	bool _ndim_d;
 	// 統計
 	// MH法で採択された回数
 	int _num_acceptance_doc;
@@ -117,18 +118,18 @@ public:
 		}
 	}
 	void compile(){
-		assert(_cstm->_ndim_d > 0);
+		assert(_ndim_d > 0);
 		assert(_compiled == false);
 		int num_docs = _dataset.size();
 		int num_vocabulary = _word_frequency.size();
-		_old_vec_copy = new double[_cstm->_ndim_d];
-		_new_vec_copy = new double[_cstm->_ndim_d];
+		_old_vec_copy = new double[_ndim_d];
+		_new_vec_copy = new double[_ndim_d];
 		// 単語のランダムサンプリング用
 		for(id word_id = 0;word_id < num_vocabulary;word_id++){
 			_random_word_ids.push_back(word_id);
 		}
 		// CSTM
-		_cstm = new CSTM(num_docs, num_vocabulary, _cstm->_ndim_d);
+		_cstm = new CSTM(num_docs, num_vocabulary, _ndim_d);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			_cstm->add_document(doc_id);
 			vector<vector<id>> &dataset = _dataset[doc_id];
@@ -250,7 +251,7 @@ public:
 		return _new_vec_copy;
 	}
 	void set_ndim_d(int ndim_d){
-		_cstm->_ndim_d = ndim_d;
+		_ndim_d = ndim_d;
 	}
 	python::list convert_vector_to_list(double* vector){
 		python::list vector_list;

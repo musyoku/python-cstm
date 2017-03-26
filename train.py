@@ -30,6 +30,7 @@ def main(args):
 	num_docs = cstm.get_num_documents()
 	print "\r", num_vocab, "vocabularies,", num_docs, "docs,", cstm.get_sum_word_frequency(), "words"
 	start_time = time.time()
+	total_time = 0
 	itr = 0
 	epoch = 0
 	while True:
@@ -46,7 +47,7 @@ def main(args):
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
 			print "\rEpoch", epoch, " " * 20
-			print "	PPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec"
+			print "	PPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec", "-", int(total_time / 60.0), "min"
 			print "	MH acceptance:"
 			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector()
 			print "	alpha0:", cstm.get_alpha0()
