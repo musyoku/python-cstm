@@ -312,7 +312,6 @@ void test9(){
 		id word_id = elem.first;
 		double distance = elem.second;
 		wstring word = model->_vocab->word_id_to_string(word_id);
-		wcout << word << ": " << distance << endl;
 		num_to_show--;
 		if(num_to_show < 0){
 			break;
@@ -322,7 +321,7 @@ void test9(){
 }
 
 int main(int argc, char *argv[]){
-	// test9();
+	test9();
 	// test5();
 	// test6();
 	// test3();

@@ -52,7 +52,7 @@ def plot_scatter_category(data_for_category, ndim, out_dir=None, filename="scatt
 			fig.set_size_inches(16.0, 16.0)
 			pylab.clf()
 			for category, data in enumerate(data_for_category):
-				pylab.scatter(data[:, i], data[:, i + 1], s=20, marker=markers[category % len(markers)], edgecolors="none", color=palette[category])
+				pylab.scatter(data[:, i], data[:, i + 1], s=30, marker=markers[category % len(markers)], edgecolors="none", color=palette[category])
 			# pylab.xlim(-4, 4)
 			# pylab.ylim(-4, 4)
 			pylab.savefig("{}/{}_{}-{}.png".format(out_dir, filename, i, i + 1))
@@ -80,13 +80,13 @@ def plot_f(words, doc_vectors, out_dir=None, filename="f"):
 			collection.append((word, word_vector))
 		for doc_id, doc_vector in enumerate(doc_vectors):
 			fig = pylab.gcf()
-			fig.set_size_inches(20.0, 10.0)
+			fig.set_size_inches(40.0, 20.0)
 			pylab.clf()
 			for meta in collection:
 				word, word_vector = meta
 				f = np.inner(word_vector, doc_vector)
 				y = np.random.uniform(low=-5, high=5)
-				pylab.text(f, y, word, fontsize=5)
+				pylab.text(f, y, word, fontsize=2)
 			pylab.xlim(-20, 20)
 			pylab.ylim(-5, 5)
 			pylab.savefig("{}/{}_{}.png".format(out_dir, filename, doc_id))
@@ -98,7 +98,7 @@ def main(args):
 		pass
 	assert os.path.exists(args.model_dir)
 	cstm = model.cstm()
-	assert cstm.load(args.model_dir) == True
+	assert cstm.load_model(args.model_dir) == True
 	print cstm.get_num_vocabulary(), "words"
 	word_vectors = np.asarray(cstm.get_word_vectors(), dtype=np.float32)
 	doc_vectors = np.asarray(cstm.get_doc_vectors(), dtype=np.float32)
@@ -116,8 +116,6 @@ def main(args):
 		f = np.inner(word_vectors, doc_vector)
 		print np.mean(f), np.std(f)
 
-	raise Exception()
-	
 	# for i in xrange(ndim - 1):
 	# 	plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
 	# 	plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
@@ -132,9 +130,9 @@ def main(args):
 
 	common_words = cstm.get_high_freq_words(10000)
 	plot_words(common_words, ndim, args.output_dir, filename="words")
-	raise Exception()
 
 	plot_f(common_words, doc_vectors, args.output_dir)
+	raise Exception()
 
 
 if __name__ == "__main__":

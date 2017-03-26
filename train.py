@@ -31,12 +31,13 @@ def main(args):
 	print "\r", num_vocab, "vocabularies,", num_docs, "docs,", cstm.get_sum_word_frequency(), "words"
 	start_time = time.time()
 	itr = 0
+	epoch = 0
 	while True:
 		# MH法
 		cstm.perform_mh_sampling_document();
 		cstm.perform_mh_sampling_word();
-		if itr % 100 == 0:
-			cstm.perform_mh_sampling_alpha0()	# alpha0は頻繁に更新しない
+		# if itr % 100 == 0:
+		# 	cstm.perform_mh_sampling_alpha0()	# alpha0は頻繁に更新しない
 
 		itr += 1
 		if itr % 100 == 0:
@@ -44,14 +45,16 @@ def main(args):
 			sys.stdout.flush()
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
-			print "\rPPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec"
-			print "MH acceptance:"
-			print "	document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector()
-			print "alpha0:", cstm.get_alpha0()
+			print "\rEpoch", epoch, " " * 20
+			print "	PPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec"
+			print "	MH acceptance:"
+			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector()
+			print "	alpha0:", cstm.get_alpha0()
 			cstm.save(args.model_dir)
 			cstm.reset_statistics()
 			start_time = time.time()
 			itr = 0
+			epoch += 1
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

@@ -122,7 +122,7 @@ public:
 		assert(_ndim_d > 0);
 		assert(_compiled == false);
 		int num_docs = _dataset.size();
-		int num_vocabulary = _docs_containing_word.size();
+		int num_vocabulary = _word_frequency.size();
 		_old_vec_copy = new double[_ndim_d];
 		_new_vec_copy = new double[_ndim_d];
 		// 単語のランダムサンプリング用
@@ -546,7 +546,29 @@ public:
 		archive & _word_frequency;
 		archive & _ndim_d;
 	}
-	bool load(string dirname){
+	bool load_trainer(string dirname){
+		std::ifstream ifs(dirname + "/cstm.trainer");
+		if(ifs.good()){
+			boost::archive::binary_iarchive iarchive(ifs);
+			iarchive >> *this;
+			if(_old_vec_copy == NULL){
+				_old_vec_copy = new double[_ndim_d];
+			}
+			if(_new_vec_copy == NULL){
+				_new_vec_copy = new double[_ndim_d];
+			}
+			int num_docs = _dataset.size();
+			if(_old_alpha_words == NULL){
+				_old_alpha_words = new double[num_docs];
+			}
+			if(_original_Zi == NULL){
+				_original_Zi = new double[num_docs];
+			}
+			_compiled = true;
+		}
+		return true;
+	}
+	bool load_model(string dirname){
 		_vocab->load(dirname + "/cstm.vocab");
 		if(_cstm == NULL){
 			_cstm = new CSTM();
@@ -558,13 +580,18 @@ public:
 		if(_cstm == NULL){
 			return false;
 		}
-		std::ifstream ifs(dirname + "/cstm.trainer");
-		if(ifs.good()){
-			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> *this;
+		if(_old_vec_copy == NULL){
 			_old_vec_copy = new double[_ndim_d];
+		}
+		if(_new_vec_copy == NULL){
 			_new_vec_copy = new double[_ndim_d];
-			_compiled = true;
+		}
+		int num_docs = _dataset.size();
+		if(_old_alpha_words == NULL){
+			_old_alpha_words = new double[num_docs];
+		}
+		if(_original_Zi == NULL){
+			_original_Zi = new double[num_docs];
 		}
 		return true;
 	}
@@ -600,6 +627,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
 	.def("compute_perplexity", &PyCSTM::compute_perplexity)
-	.def("load", &PyCSTM::load)
+	.def("load_trainer", &PyCSTM::load_trainer)
+	.def("load_model", &PyCSTM::load_model)
 	.def("save", &PyCSTM::save);
 }
