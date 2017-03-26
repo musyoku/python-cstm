@@ -11,6 +11,7 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map> 
+#include "core/fmath.h"
 #include "core/cstm.h"
 #include "core/vocab.h"
 using namespace boost;
@@ -356,7 +357,7 @@ public:
 			unordered_set<id> &word_set = _word_set[doc_id];
 			log_pw += _cstm->compute_log_Pdocument(word_set, doc_id) / (double)(word_set.size());
 		}
-		return exp(-log_pw / (double)get_num_documents());
+		return fmath::expd(-log_pw / (double)get_num_documents());
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
@@ -448,7 +449,7 @@ public:
 		// double log_acceptance_rate = log_pw_new - log_pw_old;
 		// double log_acceptance_rate = log_prior_new - log_prior_old;
 		// double log_acceptance_rate = log_pw_new - log_pw_old;
-		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
+		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
 
 		// if(acceptance_ratio < 1){
 		// 	return false;
@@ -519,7 +520,7 @@ public:
 		
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		// double log_acceptance_rate = log_pw_new - log_pw_old;
-		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
+		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
 		double bernoulli = Sampler::uniform(0, 1);
 		// if(acceptance_ratio < 1){
 		// 	return false;
@@ -562,7 +563,7 @@ public:
 		double log_prior_new = _cstm->compute_log_prior_alpha0(new_alpha0);
 
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
-		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
+		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
 		double bernoulli = Sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_alpha0 += 1;
