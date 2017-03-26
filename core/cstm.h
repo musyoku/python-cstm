@@ -29,6 +29,8 @@ public:
 	double _sigma_u;
 	double _sigma_phi;
 	double _sigma_alpha;
+	double _gamma_alpha_a;
+	double _gamma_alpha_b;
 	double _alpha0;
 	double* _tmp_vec;
 	double* _log_likelihood_first_term;
@@ -51,13 +53,14 @@ public:
 		_sigma_u = SIGMA_U;
 		_sigma_phi = SIGMA_PHI;
 		_sigma_alpha = SIGMA_ALPHA;
+		_gamma_alpha_a = GAMMA_ALPHA_A;
+		_gamma_alpha_b = GAMMA_ALPHA_B;
 		_num_vocabulary = num_vocabulary;
 		_num_documents = num_documents;
 		_standard_normal_distribution = normal_distribution<double>(0, 1);
 		_noise_word = normal_distribution<double>(0, _sigma_u);
 		_noise_doc = normal_distribution<double>(0, _sigma_phi);
 		_noise_alpha0 = normal_distribution<double>(0, _sigma_alpha);
-		_alpha0 = 1;
 		_sum_word_frequency = 0;
 		_tmp_vec = generate_vector();
 		_g0 = new double[_num_vocabulary];
@@ -117,6 +120,11 @@ public:
 		}
 	}
 	void compile(){
+		_alpha0 = Sampler::gamma(_gamma_alpha_a, _gamma_alpha_b);
+		assert(_sigma_u > 0);
+		assert(_sigma_phi > 0);
+		assert(_sigma_alpha > 0);
+		assert(_alpha0 > 0);
 		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			double sum_count = 0;
 			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
@@ -423,6 +431,9 @@ public:
 		// cout << "	" << "pw: " << exp(log_pw) << endl;
 		return log_pw;
 	}
+	double compute_log_prior_alpha0(double alpha0){
+		return _gamma_alpha_a * log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * log(alpha0) - _gamma_alpha_b * alpha0;
+	}
 	double compute_log_Pvector_doc(double* new_vec, double* old_vec){
 		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_u);
 	}
@@ -479,6 +490,21 @@ public:
 	}
 	void set_alpha0(double alpha0){
 		_alpha0 = alpha0;
+	}
+	void set_sigma_u(double sigma_u){
+		_sigma_u = sigma_u;
+	}
+	void set_sigma_phi(double sigma_phi){
+		_sigma_phi = sigma_phi;
+	}
+	void set_sigma_alpha(double sigma_alpha){
+		_sigma_alpha = sigma_alpha;
+	}
+	void set_gamma_alpha_a(double gamma_alpha_a){
+		_gamma_alpha_a = gamma_alpha_a;
+	}
+	void set_gamma_alpha_b(double gamma_alpha_b){
+		_gamma_alpha_b = gamma_alpha_b;
 	}
 	void set_word_vector(id word_id, double* source){
 		assert(word_id < _num_vocabulary);

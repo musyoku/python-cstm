@@ -12,15 +12,10 @@ void test1(){
 	string dirname = "out";
 	PyCSTM* model = new PyCSTM();
 	int doc_id;
-	doc_id = model->add_document("./documents/geforce.txt");
-	doc_id = model->add_document("./documents/gochiusa.txt");
-	doc_id = model->add_document("./documents/imas.txt");
-	doc_id = model->add_document("./documents/kemono.txt");
-	doc_id = model->add_document("./documents/macbook.txt");
-	doc_id = model->add_document("./documents/monst.txt");
-	doc_id = model->add_document("./documents/pad.txt");
-	doc_id = model->add_document("./documents/tekketsu.txt");
-	doc_id = model->add_document("./documents/win10.txt");
+	doc_id = model->add_document("./documents/geforce.txt_0.txt");
+	doc_id = model->add_document("./documents/geforce.txt_1.txt");
+	doc_id = model->add_document("./documents/geforce.txt_2.txt");
+	model->set_ndim_d(10);
 	model->compile();
 	int num_docs = model->get_num_documents();
 	int num_words = model->get_num_vocabulary();
@@ -32,7 +27,9 @@ void test1(){
 	for(int i = 1;i < 5000000;i++){
 		model->perform_mh_sampling_document();
 		model->perform_mh_sampling_word();
-		// model->perform_mh_sampling_alpha0();
+		if((i * (int)(num_words / (double)num_docs)) % num_words == 0){
+			model->perform_mh_sampling_alpha0();
+		}
 		// if(i % 100 == 0){
 		// }
 		// double ppl_train = model->compute_perplexity_train();

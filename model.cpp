@@ -97,7 +97,7 @@ public:
 		_original_Zi = NULL;
 		reset_statistics();
 		_compiled = false;
-		_ndim_d = 0;
+		_ndim_d = 20;
 		_random_sampling_start_index = 0;
 	}
 	~PyCSTM(){
@@ -221,6 +221,9 @@ public:
 	}
 	int get_num_doc_vec_sampled(){
 		return _num_doc_vec_sampled;
+	}
+	double get_alpha0(){
+		return _cstm->_alpha0;
 	}
 	double get_mh_acceptance_rate_for_doc_vector(){
 		return _num_acceptance_doc / (double)(_num_acceptance_doc + _num_rejection_doc);
@@ -517,7 +520,10 @@ public:
 			unordered_set<id> &word_set = _word_set[doc_id];
 			log_pw_new += _cstm->compute_log_Pdocument(word_set, doc_id);
 		}
-		double log_acceptance_rate = log_pw_new - log_pw_old;
+		double log_prior_old = _cstm->compute_log_prior_alpha0(old_alpha0);
+		double log_prior_new = _cstm->compute_log_prior_alpha0(new_alpha0);
+
+		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		double acceptance_ratio = std::min(1.0, exp(log_acceptance_rate));
 		double bernoulli = Sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
@@ -588,6 +594,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_mh_acceptance_rate_for_doc_vector", &PyCSTM::get_mh_acceptance_rate_for_doc_vector)
 	.def("get_num_doc_vec_sampled", &PyCSTM::get_num_doc_vec_sampled)
 	.def("get_num_word_vec_sampled", &PyCSTM::get_num_word_vec_sampled)
+	.def("get_alpha0", &PyCSTM::get_alpha0)
 	.def("set_ndim_d", &PyCSTM::set_ndim_d)
 	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
