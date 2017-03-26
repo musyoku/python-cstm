@@ -116,7 +116,6 @@ def main(args):
 		f = np.inner(word_vectors, doc_vector)
 		print np.mean(f), np.std(f)
 
-	raise Exception()
 	# for i in xrange(ndim - 1):
 	# 	plot_kde(word_vectors[:,i:], args.output_dir, filename="word_kde_{}-{}".format(i, i + 1))
 	# 	plot_scatter(word_vectors[:,i:], args.output_dir, filename="word_scatter_{}-{}".format(i, i + 1))
@@ -129,6 +128,7 @@ def main(args):
 	doc_vectors_for_category = np.split(doc_vectors, num_sections)
 	plot_scatter_category(doc_vectors_for_category, ndim, args.output_dir, filename="doc_for_category")
 
+	raise Exception()
 	common_words = cstm.get_high_freq_words(10000)
 	plot_words(common_words, ndim, args.output_dir, filename="words")
 

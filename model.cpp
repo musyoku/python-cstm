@@ -59,6 +59,7 @@ public:
 	vector<unordered_set<id>> _word_set;
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	vector<id> _random_word_ids;
+	vector<int> _random_doc_ids;
 	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	unordered_map<id, int> _word_frequency;
 	double* _old_vec_copy;
@@ -80,7 +81,11 @@ public:
 	int _num_word_vec_sampled;
 	int _num_doc_vec_sampled;
 	// その他
-	int _random_sampling_start_index;
+	int _random_sampling_word_start_index;
+	int _random_sampling_doc_current_index;
+	unordered_map<id, int> _num_updates_word;
+	unordered_map<int, int> _num_updates_doc;
+
 	PyCSTM(){
 		setlocale(LC_CTYPE, "ja_JP.UTF-8");
 		ios_base::sync_with_stdio(false);
@@ -98,7 +103,8 @@ public:
 		_ndim_d = 0;
 		reset_statistics();
 		_compiled = false;
-		_random_sampling_start_index = 0;
+		_random_sampling_word_start_index = 0;
+		_random_sampling_doc_current_index = 0;
 	}
 	~PyCSTM(){
 		delete _cstm;
@@ -126,6 +132,7 @@ public:
 		// 単語のランダムサンプリング用
 		for(id word_id = 0;word_id < num_vocabulary;word_id++){
 			_random_word_ids.push_back(word_id);
+			_num_updates_word[word_id] = 0;
 		}
 		// CSTM
 		_cstm->set_ndim_d(_ndim_d);
@@ -140,6 +147,8 @@ public:
 					_cstm->add_word(word_id, doc_id);
 				}
 			}
+			_num_updates_doc[doc_id] = 0;
+			_random_doc_ids.push_back(doc_id);
 		}
 		_cstm->compile();
 		assert(_ndim_d == _cstm->_ndim_d);
@@ -155,6 +164,8 @@ public:
 		// cout << endl;
 		_old_alpha_words = new double[num_docs];
 		_original_Zi = new double[num_docs];
+		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
+		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
 	}
 	int add_document(string filename){
 		wifstream ifs(filename.c_str());
@@ -339,20 +350,22 @@ public:
 		assert(_cstm != NULL);
 		int num_vocabulary = _docs_containing_word.size();
 		int limit = (int)(num_vocabulary / (double)get_num_documents());
-		if(_random_sampling_start_index + limit >= _random_word_ids.size()){
+		// int limit = num_vocabulary;
+		if(_random_sampling_word_start_index + limit >= _random_word_ids.size()){
 			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
-			_random_sampling_start_index = 0;
+			_random_sampling_word_start_index = 0;
 		}
 		for(int i = 0;i < limit;i++){
-			id word_id = _random_word_ids[i + _random_sampling_start_index];
+			id word_id = _random_word_ids[i + _random_sampling_word_start_index];
 			double* old_vec = get_word_vector(word_id);
 			double* new_vec = draw_word_vector(old_vec);
 			if(mh_accept_word_vec(new_vec, old_vec, word_id)){
 				_cstm->set_word_vector(word_id, new_vec);
 			}
 			_num_word_vec_sampled += 1;
+			_num_updates_word[word_id] += 1;
 		}
-		_random_sampling_start_index += limit;
+		_random_sampling_word_start_index += limit;
 	}
 	bool mh_accept_word_vec(double* new_vec, double* old_vec, id word_id){
 		auto itr = _docs_containing_word.find(word_id);
@@ -437,13 +450,19 @@ public:
 	}
 	void perform_mh_sampling_document(){
 		assert(_cstm != NULL);
-		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
+		_random_sampling_doc_current_index += 1;
+		if(_random_sampling_doc_current_index == _random_doc_ids.size()){
+			std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
+			_random_sampling_doc_current_index = 0;
+		}
+		int doc_id = _random_doc_ids[_random_sampling_doc_current_index];
 		double* old_vec = get_doc_vector(doc_id);
 		double* new_vec = draw_doc_vector(old_vec);
 		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
 			_cstm->set_doc_vector(doc_id, new_vec);
 		}
 		_num_doc_vec_sampled += 1;
+		_num_updates_doc[doc_id] += 1;
 	}
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
 		unordered_set<id> &word_set = _word_set[doc_id];
@@ -561,6 +580,34 @@ public:
 		_vocab->save(dirname + "/cstm.vocab");
 		_cstm->save(dirname + "/cstm.model");
 	}
+	void debug_num_updates_word(){
+		int max = 0;
+		int min = -1;
+		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
+			int count = _num_updates_word[word_id];
+			if(count > max){
+				max = count;
+			}
+			if(min == -1 || count < min){
+				min = count;
+			}
+		}
+		cout << "max: " << max << ", min: " << min << endl;
+	}
+	void debug_num_updates_doc(){
+		int max = 0;
+		int min = -1;
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			int count = _num_updates_doc[doc_id];
+			if(count > max){
+				max = count;
+			}
+			if(min == -1 || count < min){
+				min = count;
+			}
+		}
+		cout << "max: " << max << ", min: " << min << endl;
+	}
 };
 
 BOOST_PYTHON_MODULE(model){
@@ -586,6 +633,8 @@ BOOST_PYTHON_MODULE(model){
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
 	.def("compute_perplexity", &PyCSTM::compute_perplexity)
+	.def("debug_num_updates_word", &PyCSTM::debug_num_updates_word)
+	.def("debug_num_updates_doc", &PyCSTM::debug_num_updates_doc)
 	.def("load", &PyCSTM::load)
 	.def("save", &PyCSTM::save);
 }
