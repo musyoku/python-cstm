@@ -248,6 +248,9 @@ public:
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
 		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
 		int n_k = get_word_count_in_doc(word_id, doc_id);
+		if(n_k == 0){
+			return log_pw;
+		}
 		// log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		if(n_k > 10){
 			// n_k > 10の場合はlgammaを使ったほうが速い
@@ -537,17 +540,15 @@ public:
 		// }
 	}
 	void update_Zi(int doc_id, unordered_set<id> &word_set){
-		assert(doc_id < _num_documents);
-		_Zi[doc_id] = sum_alpha_word_given_doc(doc_id, word_set);
-		assert(_Zi[doc_id] > 0);
+		set_Zi(doc_id, sum_alpha_word_given_doc(doc_id, word_set));
 		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
-	void swap_Zi_component(int doc_id, double old_value, double new_value){
-		assert(doc_id < _num_documents);
-		_Zi[doc_id] += new_value - old_value;
-		assert(_Zi[doc_id] > 0);
-		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
-	}
+	// void swap_Zi_component(int doc_id, double old_value, double new_value){
+	// 	assert(doc_id < _num_documents);
+	// 	_Zi[doc_id] += new_value - old_value;
+	// 	assert(_Zi[doc_id] > 0);
+	// 	// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
+	// }
 	void set_Zi(int doc_id, double new_value){
 		assert(doc_id < _num_documents);
 		assert(new_value > 0);
