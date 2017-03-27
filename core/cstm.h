@@ -29,7 +29,7 @@ public:
 	int _sum_word_frequency;	// 全単語の出現回数の総和
 	double _sigma_u;
 	double _sigma_phi;
-	double _sigma_alpha;
+	double _sigma_alpha0;
 	double _gamma_alpha_a;
 	double _gamma_alpha_b;
 	double _alpha0;
@@ -45,7 +45,7 @@ public:
 		_ndim_d = NDIM_D;
 		_sigma_u = SIGMA_U;
 		_sigma_phi = SIGMA_PHI;
-		_sigma_alpha = SIGMA_ALPHA;
+		_sigma_alpha0 = SIGMA_ALPHA;
 		_gamma_alpha_a = GAMMA_ALPHA_A;
 		_gamma_alpha_b = GAMMA_ALPHA_B;
 		_g0 = NULL;
@@ -62,9 +62,6 @@ public:
 		_initialized = false;
 		_compiled = false;
 		_standard_normal_distribution = normal_distribution<double>(0, 1);
-		_noise_word = normal_distribution<double>(0, _sigma_phi);
-		_noise_doc = normal_distribution<double>(0, _sigma_u);
-		_noise_alpha0 = normal_distribution<double>(0, _sigma_alpha);
 	}
 	~CSTM(){
 		if(_word_vectors != NULL){
@@ -140,7 +137,7 @@ public:
 		assert(_num_vocabulary > 0);
 		assert(_sigma_u > 0);
 		assert(_sigma_phi > 0);
-		assert(_sigma_alpha > 0);
+		assert(_sigma_alpha0 > 0);
 		// 基底分布
 		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			double sum_count = 0;
@@ -178,6 +175,9 @@ public:
 			}
 			_log_likelihood_first_term[doc_id] = log_pw;
 		}
+		_noise_word = normal_distribution<double>(0, _sigma_phi);
+		_noise_doc = normal_distribution<double>(0, _sigma_u);
+		_noise_alpha0 = normal_distribution<double>(0, _sigma_alpha0);
 		_compiled = true;
 	}
 	void add_word(id word_id, int doc_id){
@@ -250,7 +250,7 @@ public:
 		int n_k = get_word_count_in_doc(word_id, doc_id);
 		// log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		if(n_k > 10){
-			// n_k > 10の場合はlgammaを使った法が速い
+			// n_k > 10の場合はlgammaを使ったほうが速い
 			log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		}else{
 			double tmp = 0;
@@ -319,7 +319,7 @@ public:
 			// cout << "	";
 			// dump_vec(_word_vectors[word_id], _ndim_d);
 			if(n_k > 10){
-				// n_k > 10の場合はlgammaを使った法が速い
+				// n_k > 10の場合はlgammaを使ったほうが速い
 				log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 			}else{
 				double tmp = 0;
@@ -505,7 +505,7 @@ public:
 		_sigma_phi = sigma_phi;
 	}
 	void set_sigma_alpha(double sigma_alpha){
-		_sigma_alpha = sigma_alpha;
+		_sigma_alpha0 = sigma_alpha;
 	}
 	void set_gamma_alpha_a(double gamma_alpha_a){
 		_gamma_alpha_a = gamma_alpha_a;
@@ -585,7 +585,7 @@ void save(Archive &archive, const CSTM &cstm, unsigned int version) {
 	archive & cstm._sum_word_frequency;
 	archive & cstm._sigma_u;
 	archive & cstm._sigma_phi;
-	archive & cstm._sigma_alpha;
+	archive & cstm._sigma_alpha0;
 	archive & cstm._alpha0;
 	archive & cstm._initialized;
 	archive & cstm._compiled;
@@ -627,7 +627,7 @@ void load(Archive &archive, CSTM &cstm, unsigned int version) {
 	archive & cstm._sum_word_frequency;
 	archive & cstm._sigma_u;
 	archive & cstm._sigma_phi;
-	archive & cstm._sigma_alpha;
+	archive & cstm._sigma_alpha0;
 	archive & cstm._alpha0;
 	archive & cstm._initialized;
 	archive & cstm._compiled;

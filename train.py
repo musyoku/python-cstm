@@ -18,7 +18,7 @@ def main(args):
 	cstm.set_ndim_d(args.ndim_d)
 	cstm.set_sigma_u(0.01)
 	cstm.set_sigma_phi(0.02)
-	cstm.set_sigma_phi(0.2)
+	cstm.set_sigma_alpha0(0.2)
 	cstm.set_gamma_alpha_a(10)
 	cstm.set_gamma_alpha_b(1)
 
