@@ -276,8 +276,8 @@ public:
 	void set_sigma_phi(double sigma_phi){
 		_cstm->_sigma_phi = sigma_phi;
 	}
-	void set_sigma_alpha(double sigma_alpha){
-		_cstm->_sigma_alpha = sigma_alpha;
+	void set_sigma_alpha0(double sigma_alpha0){
+		_cstm->_sigma_alpha0 = sigma_alpha0;
 	}
 	void set_gamma_alpha_a(double gamma_alpha_a){
 		_cstm->_gamma_alpha_a = gamma_alpha_a;
@@ -651,7 +651,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("set_alpha0", &PyCSTM::set_alpha0)
 	.def("set_sigma_u", &PyCSTM::set_sigma_u)
 	.def("set_sigma_phi", &PyCSTM::set_sigma_phi)
-	.def("set_sigma_phi", &PyCSTM::set_sigma_phi)
+	.def("set_sigma_alpha0", &PyCSTM::set_sigma_alpha0)
 	.def("set_gamma_alpha_a", &PyCSTM::set_gamma_alpha_a)
 	.def("set_gamma_alpha_b", &PyCSTM::set_gamma_alpha_b)
 	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
