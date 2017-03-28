@@ -56,6 +56,9 @@ def main(args):
 			print "	MH acceptance:"
 			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector()
 			print "	alpha0:", cstm.get_alpha0()
+			cstm.debug_num_updates_word()
+			cstm.debug_num_updates_word()
+			
 			cstm.save(args.model_dir)
 			cstm.reset_statistics()
 			total_time += elapsed_time

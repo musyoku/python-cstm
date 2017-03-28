@@ -66,7 +66,7 @@ public:
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double* _old_alpha_words;
-	double* _original_Zi;
+	double* _new_Zi;
 	bool _compiled;
 	int _ndim_d;
 	// 統計
@@ -100,7 +100,7 @@ public:
 		_old_vec_copy = NULL;
 		_new_vec_copy = NULL;
 		_old_alpha_words = NULL;
-		_original_Zi = NULL;
+		_new_Zi = NULL;
 		_ndim_d = 0;
 		reset_statistics();
 		_compiled = false;
@@ -119,8 +119,8 @@ public:
 		if(_old_alpha_words != NULL){
 			delete[] _old_alpha_words;
 		}
-		if(_original_Zi != NULL){
-			delete[] _original_Zi;
+		if(_new_Zi != NULL){
+			delete[] _new_Zi;
 		}
 	}
 	void compile(){
@@ -163,7 +163,7 @@ public:
 		// }
 		// cout << endl;
 		_old_alpha_words = new double[num_docs];
-		_original_Zi = new double[num_docs];
+		_new_Zi = new double[num_docs];
 		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
 		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
 	}
@@ -385,79 +385,58 @@ public:
 			id word_id = _random_word_ids[i + _random_sampling_word_start_index];
 			double* old_vec = get_word_vector(word_id);
 			double* new_vec = draw_word_vector(old_vec);
-			if(mh_accept_word_vec(new_vec, old_vec, word_id)){
-				_cstm->set_word_vector(word_id, new_vec);
-			}
+			accept_word_vecor_if_needed(new_vec, old_vec, word_id);
 			_num_word_vec_sampled += 1;
 			_num_updates_word[word_id] += 1;
 		}
 		_random_sampling_word_start_index += limit;
 	}
-	bool mh_accept_word_vec(double* new_vec, double* old_vec, id word_id){
+	bool accept_word_vecor_if_needed(double* new_word_vec, double* old_word_vec, id word_id){
 		auto itr = _docs_containing_word.find(word_id);
 		assert(itr != _docs_containing_word.end());
 		unordered_set<int> &docs = itr->second;
 		assert(docs.size() > 0);
-		// _cstm->set_word_vector(word_id, old_vec);
+		// _cstm->set_word_vector(word_id, old_word_vec);
 		double log_pw_old = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			_old_alpha_words[doc_id] = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
-			_original_Zi[doc_id] = _cstm->get_Zi(doc_id);
+			double old_alpha_word = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
+			double old_Zi = _cstm->get_Zi(doc_id);
 			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
-			double log_pw = _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, _original_Zi[doc_id], _old_alpha_words[doc_id]);
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// double _log_pw = _cstm->_compute_reduced_log_Pdocument(word_id, doc_id);
-			// printf("%.16e\n", abs(log_pw - _log_pw));
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			// //
-			log_pw_old += log_pw;
-			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
-			// log_pw_old += log(alpha);
+			log_pw_old += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, old_Zi, old_alpha_word);
+			_old_alpha_words[doc_id] = old_alpha_word;
 		}
-		_cstm->set_word_vector(word_id, new_vec);	// 新しい単語ベクトルで差し替える
+		// _cstm->set_word_vector(word_id, new_word_vec);	// 新しい単語ベクトルで差し替える
+		double g0 = _cstm->get_g0_of_word(word_id);
 		double log_pw_new = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			double* doc_vec = _cstm->get_doc_vector(doc_id);
+			double new_alpha_word = _cstm->_compute_alpha_word(new_word_vec, doc_vec, g0);
 			double old_alpha_word = _old_alpha_words[doc_id];
-			double new_alpha_word = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// cout << old_alpha_word << ", " << new_alpha_word << endl;
 			// Ziの計算を簡略化
-			double old_Zi = _original_Zi[doc_id];
+			// double old_Zi = _new_Zi[doc_id];
+			double old_Zi = _cstm->get_Zi(doc_id);
 			double new_Zi = old_Zi - old_alpha_word + new_alpha_word;
 			assert(old_Zi >= old_alpha_word);
 			assert(new_Zi >= new_alpha_word);
-			_cstm->set_Zi(doc_id, new_Zi);
+			// _cstm->set_Zi(doc_id, new_Zi);
 			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
-			log_pw_new += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, new_Zi, new_alpha_word);
+			log_pw_old += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, new_Zi, new_alpha_word);
+			_new_Zi[doc_id] = new_Zi;
 			
 			// _cstm->swap_Zi_component(doc_id, new_alpha_word, old_alpha_word);	// 元に戻す
 			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// log_pw_old += log(alpha);
 		}
-		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
-		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
-		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
-		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
-		// dump_vec(old_vec, _cstm->_ndim_d);
-		// dump_vec(new_vec, _cstm->_ndim_d);
+		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_word_vec, old_word_vec);
+		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_word_vec, new_word_vec);
+		double log_prior_old = _cstm->compute_log_prior_vector(old_word_vec);
+		double log_prior_new = _cstm->compute_log_prior_vector(new_word_vec);
+
+		assert(log_pw_new != log_pw_old);
+		assert(log_prior_new != log_prior_old);
+		// dump_vec(old_word_vec, _cstm->_ndim_d);
+		// dump_vec(new_word_vec, _cstm->_ndim_d);
 
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		// double log_acceptance_rate = log_pw_new - log_pw_old;
@@ -472,13 +451,13 @@ public:
 		double bernoulli = Sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_word += 1;
+			_cstm->set_word_vector(word_id, new_word_vec);
+			for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+				_cstm->set_Zi(doc_id, _new_Zi[doc_id]);
+			}
 			return true;
 		}
 		_num_rejection_word += 1;
-		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			_cstm->set_Zi(doc_id, _original_Zi[doc_id]);	// 元に戻す
-		}
-		_cstm->set_word_vector(word_id, old_vec);	// 元に戻す
 		return false;
 	}
 	void perform_mh_sampling_document(){
@@ -601,8 +580,8 @@ public:
 		if(_old_alpha_words == NULL){
 			_old_alpha_words = new double[num_docs];
 		}
-		if(_original_Zi == NULL){
-			_original_Zi = new double[num_docs];
+		if(_new_Zi == NULL){
+			_new_Zi = new double[num_docs];
 		}
 		return true;
 	}

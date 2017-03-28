@@ -232,10 +232,15 @@ public:
 		assert(word_id < _num_vocabulary);
 		assert(doc_id < _num_documents);
 		double* word_vec = _word_vectors[word_id];
-		assert(word_vec != NULL);
 		double* doc_vec = _doc_vectors[doc_id];
-		double f = compute_dot(word_vec, doc_vec, _ndim_d);
 		double g0 = get_g0_of_word(word_id);
+		return _compute_alpha_word(word_vec, doc_vec, g0);
+	}
+	double _compute_alpha_word(double* word_vec, double* doc_vec, double g0){
+		assert(word_vec != NULL);
+		assert(doc_vec != NULL);
+		assert(g0 > 0);
+		double f = compute_dot(word_vec, doc_vec, _ndim_d);
 		double alpha = _alpha0 * g0 * fmath::expd(f);
 		assert(alpha > 0);
 		return alpha;

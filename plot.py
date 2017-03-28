@@ -124,7 +124,7 @@ def main(args):
 		
 
 	# 文書にカテゴリがある場合
-	num_sections = 2
+	num_sections = 9
 	doc_vectors_for_category = np.split(doc_vectors, num_sections)
 	plot_scatter_category(doc_vectors_for_category, ndim, args.output_dir, filename="doc_for_category")
 
