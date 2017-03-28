@@ -364,9 +364,9 @@ public:
 		double log_pw = 0;
 		int n = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			log_pw += _cstm->compute_log_probability_document(doc_id);
+			log_pw += _cstm->compute_log_probability_document(doc_id) / _cstm->get_sum_word_frequency_of_doc(doc_id);
 		}
-		return fmath::expd(-log_pw / get_num_vocabulary() / get_num_documents());
+		return fmath::expd(-log_pw);
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
@@ -401,10 +401,6 @@ public:
 		// _cstm->set_word_vector(word_id, old_vec);
 		double log_pw_old = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			if(is_doc_contain_word(doc_id, word_id)){
-				continue;
-			}
-
 			_old_alpha_words[doc_id] = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			_original_Zi[doc_id] = _cstm->get_Zi(doc_id);
 			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
@@ -440,9 +436,6 @@ public:
 		_cstm->set_word_vector(word_id, new_vec);	// 新しい単語ベクトルで差し替える
 		double log_pw_new = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			if(is_doc_contain_word(doc_id, word_id)){
-				continue;
-			}
 			double old_alpha_word = _old_alpha_words[doc_id];
 			double new_alpha_word = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// cout << old_alpha_word << ", " << new_alpha_word << endl;
@@ -483,9 +476,6 @@ public:
 		}
 		_num_rejection_word += 1;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			if(is_doc_contain_word(doc_id, word_id)){
-				continue;
-			}
 			_cstm->set_Zi(doc_id, _original_Zi[doc_id]);	// 元に戻す
 		}
 		_cstm->set_word_vector(word_id, old_vec);	// 元に戻す
