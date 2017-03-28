@@ -220,10 +220,10 @@ public:
 		double z = _noise_alpha0(Sampler::minstd);
 		return old_alpha0 * fmath::expd(z);
 	}
-	double sum_alpha_word_given_doc(int doc_id, unordered_set<id> &word_set){
+	double sum_alpha_word_given_doc(int doc_id){
 		assert(doc_id < _num_documents);
 		double sum = 0;
-		for(const id word_id: word_set){
+		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			sum += compute_alpha_word_given_doc(word_id, doc_id);
 		}
 		return sum;
@@ -240,18 +240,27 @@ public:
 		assert(alpha > 0);
 		return alpha;
 	}
-	double compute_reduced_log_Pdocument(id word_id, int doc_id){
+	double compute_reduced_log_probability_document(id word_id, int doc_id){
 		assert(doc_id < _num_documents);
+		assert(word_id < _num_vocabulary);
 		double log_pw = 0;
-		double sum_alpha = _Zi[doc_id];
-		double sum_word_frequency = _sum_n_k[doc_id];
-		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
+		double Zi = _Zi[doc_id];
 		int n_k = get_word_count_in_doc(word_id, doc_id);
+		if(n_k == 0){
+			return _compute_reduced_log_probability_document(word_id, doc_id, n_k, Zi, 0);
+		}
+		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+		return _compute_reduced_log_probability_document(word_id, doc_id, n_k, Zi, alpha_k);
+	}
+	double _compute_reduced_log_probability_document(id word_id, int doc_id, int n_k, double Zi, double alpha_k){
+		assert(doc_id < _num_documents);
+		assert(word_id < _num_vocabulary);
+		double log_pw = 0;
+		double sum_word_frequency = _sum_n_k[doc_id];
+		log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		if(n_k == 0){
 			return log_pw;
 		}
-		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
-		// log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		if(n_k > 10){
 			// n_k > 10の場合はlgammaを使ったほうが速い
 			log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
@@ -264,23 +273,23 @@ public:
 		}
 		return log_pw;
 	}
-	double _compute_reduced_log_Pdocument(id word_id, int doc_id){
-		assert(doc_id < _num_documents);
-		double log_pw = 0;
-		double sum_alpha = _Zi[doc_id];
-		double sum_word_frequency = _sum_n_k[doc_id];
-		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
-		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
-		int n_k = get_word_count_in_doc(word_id, doc_id);
-		log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
-		return log_pw;
-	}
-	double compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
+	// double _compute_reduced_log_probability_document(id word_id, int doc_id){
+	// 	assert(doc_id < _num_documents);
+	// 	double log_pw = 0;
+	// 	double Zi = _Zi[doc_id];
+	// 	double sum_word_frequency = _sum_n_k[doc_id];
+	// 	log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
+	// 	double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
+	// 	int n_k = get_word_count_in_doc(word_id, doc_id);
+	// 	log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
+	// 	return log_pw;
+	// }
+	double compute_log_probability_document(int doc_id){
 		assert(doc_id < _num_documents);
 		double log_pw = _log_likelihood_first_term[doc_id];
-		double sum_alpha = _Zi[doc_id];
-		// printf("%.16e\n", sum_alpha);
-		assert(sum_alpha > 0);
+		double Zi = _Zi[doc_id];
+		// printf("%.16e\n", Zi);
+		assert(Zi > 0);
 		// 
 		// 
 		// 
@@ -288,12 +297,12 @@ public:
 		// 
 		// 
 		// double _sum_alpha = sum_alpha_word_given_doc(doc_id, word_set);
-		// if(abs(sum_alpha - _sum_alpha) > 1e-6){
-		// 	printf("%.16e\n", sum_alpha);
+		// if(abs(Zi - _sum_alpha) > 1e-6){
+		// 	printf("%.16e\n", Zi);
 		// 	printf("%.16e\n", _sum_alpha);
-		// 	printf("%.16e\n", sum_alpha - _sum_alpha);
+		// 	printf("%.16e\n", Zi - _sum_alpha);
 		// }
-		// assert(abs(sum_alpha - _sum_alpha) < 1e-6);
+		// assert(abs(Zi - _sum_alpha) < 1e-6);
 		// 
 		// 
 		// 
@@ -301,19 +310,19 @@ public:
 		// 
 		// 
 		double sum_word_frequency = _sum_n_k[doc_id];
-		// cout << "	" << "sum_alpha: " << sum_alpha << endl;
+		// cout << "	" << "Zi: " << Zi << endl;
 		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
-		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
+		log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		// if(std::isnan(log_pw)){
-		// 	cout << sum_alpha << endl;
+		// 	cout << Zi << endl;
 		// 	cout << sum_word_frequency << endl;
-		// 	cout << lgamma(sum_alpha) << endl;
-		// 	cout << lgamma(sum_alpha + sum_word_frequency) << endl;
+		// 	cout << lgamma(Zi) << endl;
+		// 	cout << lgamma(Zi + sum_word_frequency) << endl;
 		// 	exit(0);
 		// }
 		// int sum_n_k_check = 0;
 		// double sum_alpha_check = 0;
-		for(const id word_id: word_set){
+		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
 			int n_k = get_word_count_in_doc(word_id, doc_id);
 			// cout << "	" << word_id << endl;
@@ -341,12 +350,12 @@ public:
 		//
 		//
 		//
-		// if(abs(sum_alpha_check - sum_alpha) > 1e-6){
+		// if(abs(sum_alpha_check - Zi) > 1e-6){
 		// 	printf("%.16e\n", sum_alpha_check);
-		// 	printf("%.16e\n", sum_alpha);
-		// 	printf("%.16e\n", abs(sum_alpha_check - sum_alpha));
+		// 	printf("%.16e\n", Zi);
+		// 	printf("%.16e\n", abs(sum_alpha_check - Zi));
 		// }
-		// assert(abs(sum_alpha_check - sum_alpha) < 1e-6);
+		// assert(abs(sum_alpha_check - Zi) < 1e-6);
 		// if(abs(sum_n_k_check - sum_word_frequency) > 1e-6){
 		// 	printf("%.16e\n", sum_n_k_check - sum_word_frequency);
 		// }
@@ -364,9 +373,9 @@ public:
 	double _compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
 		assert(doc_id < _num_documents);
 		double log_pw = 0;
-		double sum_alpha = _Zi[doc_id];
-		// printf("%.16e\n", sum_alpha);
-		assert(sum_alpha > 0);
+		double Zi = _Zi[doc_id];
+		// printf("%.16e\n", Zi);
+		assert(Zi > 0);
 		// 
 		// 
 		// 
@@ -374,12 +383,12 @@ public:
 		// 
 		// 
 		// double _sum_alpha = sum_alpha_word_given_doc(doc_id, word_set);
-		// if(abs(sum_alpha - _sum_alpha) > 1e-6){
-		// 	printf("%.16e\n", sum_alpha);
+		// if(abs(Zi - _sum_alpha) > 1e-6){
+		// 	printf("%.16e\n", Zi);
 		// 	printf("%.16e\n", _sum_alpha);
-		// 	printf("%.16e\n", sum_alpha - _sum_alpha);
+		// 	printf("%.16e\n", Zi - _sum_alpha);
 		// }
-		// assert(abs(sum_alpha - _sum_alpha) < 1e-6);
+		// assert(abs(Zi - _sum_alpha) < 1e-6);
 		// 
 		// 
 		// 
@@ -387,14 +396,14 @@ public:
 		// 
 		// 
 		double sum_word_frequency = _sum_n_k[doc_id];
-		// cout << "	" << "sum_alpha: " << sum_alpha << endl;
+		// cout << "	" << "Zi: " << Zi << endl;
 		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
-		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
+		log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		// if(std::isnan(log_pw)){
-		// 	cout << sum_alpha << endl;
+		// 	cout << Zi << endl;
 		// 	cout << sum_word_frequency << endl;
-		// 	cout << lgamma(sum_alpha) << endl;
-		// 	cout << lgamma(sum_alpha + sum_word_frequency) << endl;
+		// 	cout << lgamma(Zi) << endl;
+		// 	cout << lgamma(Zi + sum_word_frequency) << endl;
 		// 	exit(0);
 		// }
 		// int sum_n_k_check = 0;
@@ -418,12 +427,12 @@ public:
 		//
 		//
 		//
-		// if(abs(sum_alpha_check - sum_alpha) > 1e-6){
+		// if(abs(sum_alpha_check - Zi) > 1e-6){
 		// 	printf("%.16e\n", sum_alpha_check);
-		// 	printf("%.16e\n", sum_alpha);
-		// 	printf("%.16e\n", abs(sum_alpha_check - sum_alpha));
+		// 	printf("%.16e\n", Zi);
+		// 	printf("%.16e\n", abs(sum_alpha_check - Zi));
 		// }
-		// assert(abs(sum_alpha_check - sum_alpha) < 1e-6);
+		// assert(abs(sum_alpha_check - Zi) < 1e-6);
 		// if(abs(sum_n_k_check - sum_word_frequency) > 1e-6){
 		// 	printf("%.16e\n", sum_n_k_check - sum_word_frequency);
 		// }
@@ -539,8 +548,8 @@ public:
 		// 	target[i] = source[i];
 		// }
 	}
-	void update_Zi(int doc_id, unordered_set<id> &word_set){
-		set_Zi(doc_id, sum_alpha_word_given_doc(doc_id, word_set));
+	void update_Zi(int doc_id){
+		set_Zi(doc_id, sum_alpha_word_given_doc(doc_id));
 		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
 	// void swap_Zi_component(int doc_id, double old_value, double new_value){

@@ -155,7 +155,7 @@ public:
 		assert(_ndim_d == _cstm->_ndim_d);
 		// Zi
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
-			_cstm->update_Zi(doc_id, _word_set);
+			_cstm->update_Zi(doc_id);
 		}
 		assert(_sum_word_frequency.size() == _dataset.size());
 		// for(int i = 0;i < _sum_word_frequency.size();i++){
@@ -356,27 +356,26 @@ public:
 		double log_pw = 0;
 		int n = 0;
 		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
-			log_pw += _cstm->compute_log_Pdocument(_word_set, doc_id);
+			log_pw += _cstm->compute_log_probability_document(doc_id);
 		}
 		return log_pw;
 	}
 	double compute_perplexity(){
 		double log_pw = 0;
 		int n = 0;
-		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
-			log_pw += _cstm->compute_log_Pdocument(_word_set, doc_id);
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			log_pw += _cstm->compute_log_probability_document(doc_id);
 		}
-		return fmath::expd(-log_pw / get_num_vocabulary());
+		return fmath::expd(-log_pw / get_num_vocabulary() / get_num_documents());
 	}
 	void update_all_Zi(){
-		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
-			_cstm->update_Zi(doc_id, _word_set);
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			_cstm->update_Zi(doc_id);
 		}
 	}
 	void perform_mh_sampling_word(){
 		assert(_cstm != NULL);
-		int num_vocabulary = _docs_containing_word.size();
-		int limit = (int)(num_vocabulary / (double)get_num_documents());
+		int limit = (int)(get_num_vocabulary() / (double)get_num_documents());
 		// int limit = num_vocabulary;
 		if(_random_sampling_word_start_index + limit >= _random_word_ids.size()){
 			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
@@ -408,7 +407,8 @@ public:
 
 			_old_alpha_words[doc_id] = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			_original_Zi[doc_id] = _cstm->get_Zi(doc_id);
-			double log_pw = _cstm->compute_reduced_log_Pdocument(word_id, doc_id);
+			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
+			double log_pw = _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, _original_Zi[doc_id], _old_alpha_words[doc_id]);
 			// //
 			// //
 			// //
@@ -452,7 +452,9 @@ public:
 			assert(old_Zi >= old_alpha_word);
 			assert(new_Zi >= new_alpha_word);
 			_cstm->set_Zi(doc_id, new_Zi);
-			log_pw_new += _cstm->compute_reduced_log_Pdocument(word_id, doc_id);
+			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
+			log_pw_new += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, new_Zi, new_alpha_word);
+			
 			// _cstm->swap_Zi_component(doc_id, new_alpha_word, old_alpha_word);	// 元に戻す
 			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// log_pw_old += log(alpha);
@@ -508,7 +510,7 @@ public:
 	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
 		double original_Zi = _cstm->get_Zi(doc_id);
 		// _cstm->set_doc_vector(doc_id, old_vec);
-		double log_pw_old = _cstm->compute_log_Pdocument(_word_set, doc_id);
+		double log_pw_old = _cstm->compute_log_probability_document(doc_id);
 		// //
 		// //
 		// //
@@ -516,7 +518,7 @@ public:
 		// //
 		// //
 		// //
-		// double _log_pw_old = _cstm->_compute_log_Pdocument(_word_set, doc_id);
+		// double _log_pw_old = _cstm->_compute_log_Pdocument(doc_id);
 		// if(_log_pw_old != log_pw_old){
 		// 	printf("%.16e == ", log_pw_old);
 		// 	printf("%.16e; ", _log_pw_old);
@@ -532,8 +534,8 @@ public:
 		// //
 		// //
 		_cstm->set_doc_vector(doc_id, new_vec);
-		_cstm->update_Zi(doc_id, _word_set);
-		double log_pw_new = _cstm->compute_log_Pdocument(_word_set, doc_id);
+		_cstm->update_Zi(doc_id);
+		double log_pw_new = _cstm->compute_log_probability_document(doc_id);
 		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
 		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
 		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
@@ -570,13 +572,13 @@ public:
 		int num_docs = _dataset.size();
 		double log_pw_old= 0;
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
-			log_pw_old+= _cstm->compute_log_Pdocument(_word_set, doc_id);
+			log_pw_old+= _cstm->compute_log_probability_document(doc_id);
 		}
 		_cstm->set_alpha0(new_alpha0);
 		update_all_Zi();
 		double log_pw_new = 0;
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
-			log_pw_new += _cstm->compute_log_Pdocument(_word_set, doc_id);
+			log_pw_new += _cstm->compute_log_probability_document(doc_id);
 		}
 		double log_prior_old = _cstm->compute_log_prior_alpha0(old_alpha0);
 		double log_prior_new = _cstm->compute_log_prior_alpha0(new_alpha0);
