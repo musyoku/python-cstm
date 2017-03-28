@@ -52,7 +52,7 @@ def main(args):
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
 			print "\rEpoch", epoch, " " * 20
-			print "	PPL:", int(cstm.compute_perplexity()), "-", int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec", "-", int(total_time / 60.0), "min"
+			print "	", cstm.compute_perplexity(), "ppl -", cstm.compute_log_likelihood_data(), "log likelihood -",  int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec", "-", int(total_time / 60.0), "min total"
 			print "	MH acceptance:"
 			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector()
 			print "	alpha0:", cstm.get_alpha0()

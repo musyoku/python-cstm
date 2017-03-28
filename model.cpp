@@ -214,6 +214,11 @@ public:
 			dataset.push_back(word_ids);
 		}
 	}
+	bool is_doc_contain_word(int doc_id, id word_id){
+		unordered_set<int> &set = _docs_containing_word[word_id];
+		auto itr = set.find(doc_id);
+		return itr != set.end();
+	}
 	int get_num_documents(){
 		return _cstm->_num_documents;
 	}
@@ -347,13 +352,21 @@ public:
 		_num_word_vec_sampled = 0;
 		_num_doc_vec_sampled = 0;
 	}
+	double compute_log_likelihood_data(){
+		double log_pw = 0;
+		int n = 0;
+		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
+			log_pw += _cstm->compute_log_Pdocument(_word_set, doc_id);
+		}
+		return log_pw;
+	}
 	double compute_perplexity(){
 		double log_pw = 0;
 		int n = 0;
 		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
 			log_pw += _cstm->compute_log_Pdocument(_word_set, doc_id);
 		}
-		return fmath::expd(-log_pw / get_sum_word_frequency());
+		return fmath::expd(-log_pw / get_num_vocabulary());
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
@@ -389,6 +402,10 @@ public:
 		// _cstm->set_word_vector(word_id, old_vec);
 		double log_pw_old = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			if(is_doc_contain_word(doc_id, word_id)){
+				continue;
+			}
+
 			_old_alpha_words[doc_id] = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			_original_Zi[doc_id] = _cstm->get_Zi(doc_id);
 			double log_pw = _cstm->compute_reduced_log_Pdocument(word_id, doc_id);
@@ -423,6 +440,9 @@ public:
 		_cstm->set_word_vector(word_id, new_vec);	// 新しい単語ベクトルで差し替える
 		double log_pw_new = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			if(is_doc_contain_word(doc_id, word_id)){
+				continue;
+			}
 			double old_alpha_word = _old_alpha_words[doc_id];
 			double new_alpha_word = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// cout << old_alpha_word << ", " << new_alpha_word << endl;
@@ -431,14 +451,7 @@ public:
 			double new_Zi = old_Zi - old_alpha_word + new_alpha_word;
 			assert(old_Zi >= old_alpha_word);
 			assert(new_Zi >= new_alpha_word);
-			if(new_Zi <= 0){
-				cout << endl;
-				cout << old_Zi << endl;
-				cout << old_alpha_word << endl;
-				cout << new_alpha_word << endl;
-			}
 			_cstm->set_Zi(doc_id, new_Zi);
-			vector<vector<id>> &dataset = _dataset[doc_id];
 			log_pw_new += _cstm->compute_reduced_log_Pdocument(word_id, doc_id);
 			// _cstm->swap_Zi_component(doc_id, new_alpha_word, old_alpha_word);	// 元に戻す
 			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
@@ -468,6 +481,9 @@ public:
 		}
 		_num_rejection_word += 1;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			if(is_doc_contain_word(doc_id, word_id)){
+				continue;
+			}
 			_cstm->set_Zi(doc_id, _original_Zi[doc_id]);	// 元に戻す
 		}
 		_cstm->set_word_vector(word_id, old_vec);	// 元に戻す
@@ -661,6 +677,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
 	.def("compute_perplexity", &PyCSTM::compute_perplexity)
+	.def("compute_log_likelihood_data", &PyCSTM::compute_log_likelihood_data)
 	.def("debug_num_updates_word", &PyCSTM::debug_num_updates_word)
 	.def("debug_num_updates_doc", &PyCSTM::debug_num_updates_doc)
 	.def("load", &PyCSTM::load)

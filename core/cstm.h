@@ -246,11 +246,11 @@ public:
 		double sum_alpha = _Zi[doc_id];
 		double sum_word_frequency = _sum_n_k[doc_id];
 		log_pw += lgamma(sum_alpha) - lgamma(sum_alpha + sum_word_frequency);
-		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
 		int n_k = get_word_count_in_doc(word_id, doc_id);
 		if(n_k == 0){
 			return log_pw;
 		}
+		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
 		// log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		if(n_k > 10){
 			// n_k > 10の場合はlgammaを使ったほうが速い
