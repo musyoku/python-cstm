@@ -57,7 +57,7 @@ public:
 	CSTM* _cstm;
 	Vocab* _vocab;
 	vector<vector<vector<id>>> _dataset;
-	unordered_set<id> _word_set;
+	vector<unordered_set<id>> _word_ids_in_doc;
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	vector<id> _random_word_ids;
 	vector<int> _random_doc_ids;
@@ -173,6 +173,7 @@ public:
 		// 文書の追加
 		int doc_id = _dataset.size();
 		_dataset.push_back(vector<vector<id>>());
+		_word_ids_in_doc.push_back(unordered_set<id>());
 		_sum_word_frequency.push_back(0);
 		// ファイルの読み込み
 		wstring sentence;
@@ -208,7 +209,8 @@ public:
 				word_ids.push_back(word_id);
 				unordered_set<int> &docs = _docs_containing_word[word_id];
 				docs.insert(doc_id);
-				_word_set.insert(word_id);
+				unordered_set<id> &word_ids = _word_ids_in_doc[doc_id];
+				word_ids.insert(word_id);
 				_word_frequency[word_id] += 1;
 			}
 			dataset.push_back(word_ids);
@@ -355,8 +357,9 @@ public:
 	double compute_log_likelihood_data(){
 		double log_pw = 0;
 		int n = 0;
-		for(int doc_id = 0;doc_id < _dataset.size();doc_id++){
-			log_pw += _cstm->compute_log_probability_document(doc_id);
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			unordered_set<id> &word_ids = _word_ids_in_doc[doc_id];
+			log_pw += _cstm->compute_log_probability_document_given_words(doc_id, word_ids);
 		}
 		return log_pw;
 	}
@@ -364,9 +367,10 @@ public:
 		double log_pw = 0;
 		int n = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			log_pw += _cstm->compute_log_probability_document(doc_id) / _cstm->get_sum_word_frequency_of_doc(doc_id);
+			unordered_set<id> &word_ids = _word_ids_in_doc[doc_id];
+			log_pw += _cstm->compute_log_probability_document_given_words(doc_id, word_ids) / word_ids.size();
 		}
-		return fmath::expd(-log_pw);
+		return fmath::expd(-log_pw / get_num_documents());
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
@@ -388,6 +392,7 @@ public:
 			accept_word_vecor_if_needed(new_vec, old_vec, word_id);
 			_num_word_vec_sampled += 1;
 			_num_updates_word[word_id] += 1;
+			exit(0);
 		}
 		_random_sampling_word_start_index += limit;
 	}
@@ -421,18 +426,22 @@ public:
 			assert(new_Zi >= new_alpha_word);
 			// _cstm->set_Zi(doc_id, new_Zi);
 			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
-			log_pw_old += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, new_Zi, new_alpha_word);
+			log_pw_new += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, new_Zi, new_alpha_word);
 			_new_Zi[doc_id] = new_Zi;
 			
 			// _cstm->swap_Zi_component(doc_id, new_alpha_word, old_alpha_word);	// 元に戻す
 			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
 			// log_pw_old += log(alpha);
 		}
+		assert(log_pw_old != 0);
+		assert(log_pw_new != 0);
 		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_word_vec, old_word_vec);
 		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_word_vec, new_word_vec);
 		double log_prior_old = _cstm->compute_log_prior_vector(old_word_vec);
 		double log_prior_new = _cstm->compute_log_prior_vector(new_word_vec);
 
+		assert(log_prior_old != 0);
+		assert(log_prior_new != 0);
 		assert(log_pw_new != log_pw_old);
 		assert(log_prior_new != log_prior_old);
 		// dump_vec(old_word_vec, _cstm->_ndim_d);
