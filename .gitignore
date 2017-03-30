@@ -1,6 +1,5 @@
 # ignore all
 *
-test.cpp
 
 # allow any
 !*/
@@ -10,3 +9,5 @@ test.cpp
 !*.md
 !.gitignore
 !makefile
+# ignore
+test.cpp
