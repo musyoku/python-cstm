@@ -129,6 +129,7 @@ def main():
 	common_words = cstm.get_high_freq_words(10000)
 	plot_words(common_words, ndim, args.output_dir, filename="words")
 
+	# 各文書についてfをプロット
 	plot_f(common_words, doc_vectors, args.output_dir)
 	raise Exception()
 

@@ -1,9 +1,4 @@
 #pragma once
-#include <unordered_map>
-#include "hashmap.h"
-template<class T, class U>
-// using hashmap = std::unordered_map<T, U>;
-using hashmap = emilib::HashMap<T, U>;
 
 #define NDIM_D 			2		// 文書・単語ベクトルの次元数
 #define SIGMA_U 		0.01	// 文書ベクトルのランダムウォーク幅

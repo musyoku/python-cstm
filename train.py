@@ -23,8 +23,8 @@ def main():
 	assert os.path.exists(args.document_dir)
 	cstm = model.cstm()
 	cstm.set_ndim_d(args.ndim_d)
-	cstm.set_sigma_u(0.01)
-	cstm.set_sigma_phi(0.02)
+	cstm.set_sigma_u(0.02)
+	cstm.set_sigma_phi(0.04)
 	cstm.set_sigma_alpha0(0.2)
 	cstm.set_gamma_alpha_a(5)
 	cstm.set_gamma_alpha_b(500)
@@ -46,7 +46,7 @@ def main():
 		cstm.perform_mh_sampling_document();
 		cstm.perform_mh_sampling_word();
 		if itr % 1000 == 0:
-			cstm.perform_mh_sampling_alpha0()	# alpha0の更新は重い
+			cstm.perform_mh_sampling_alpha0()	# alpha0の更新は重いのでなるべくしたくない
 
 		itr += 1
 		if itr % 100 == 0:
@@ -56,14 +56,13 @@ def main():
 			elapsed_time = time.time() - start_time
 			print "\rEpoch", epoch
 			print "	", cstm.compute_perplexity(), "ppl -", cstm.compute_log_likelihood_data(), "log likelihood -",  int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec", "-", int(total_time / 60.0), "min total"
+			# 実際に受理・棄却された回数の統計を取ってあるので表示
 			print "	MH acceptance:"
 			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector(), ", a0:", cstm.get_mh_acceptance_rate_for_alpha0()
 			print "	alpha0:", cstm.get_alpha0()
-			# cstm.debug_num_updates_word()
-			# cstm.debug_num_updates_word()
 			
 			cstm.save(args.model_dir)
-			cstm.reset_statistics()
+			cstm.reset_statistics()	# 統計をリセット. 結果表示用の統計なので学習とは無関係
 			total_time += elapsed_time
 			start_time = time.time()
 			itr = 0

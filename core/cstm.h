@@ -277,97 +277,26 @@ public:
 		}
 		return log_pw;
 	}
-	// double _compute_reduced_log_probability_document(id word_id, int doc_id){
-	// 	assert(doc_id < _num_documents);
-	// 	double log_pw = 0;
-	// 	double Zi = _Zi[doc_id];
-	// 	double sum_word_frequency = _sum_n_k[doc_id];
-	// 	log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
-	// 	double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
-	// 	int n_k = get_word_count_in_doc(word_id, doc_id);
-	// 	log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
-	// 	return log_pw;
-	// }
 	double compute_log_probability_document(int doc_id){
 		assert(doc_id < _num_documents);
-		double log_pw = 0;
 		double Zi = _Zi[doc_id];
-		// printf("%.16e\n", Zi);
 		assert(Zi > 0);
-		// 
-		// 
-		// 
-		// 
-		// 
-		// 
-		// double _sum_alpha = sum_alpha_word_given_doc(doc_id, word_set);
-		// if(abs(Zi - _sum_alpha) > 1e-6){
-		// 	printf("%.16e\n", Zi);
-		// 	printf("%.16e\n", _sum_alpha);
-		// 	printf("%.16e\n", Zi - _sum_alpha);
-		// }
-		// assert(abs(Zi - _sum_alpha) < 1e-6);
-		// 
-		// 
-		// 
-		// 
-		// 
-		// 
 		double sum_word_frequency = _sum_n_k[doc_id];
-		// cout << "	" << "Zi: " << Zi << endl;
-		// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
-		log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
-		// if(std::isnan(log_pw)){
-		// 	cout << Zi << endl;
-		// 	cout << sum_word_frequency << endl;
-		// 	cout << lgamma(Zi) << endl;
-		// 	cout << lgamma(Zi + sum_word_frequency) << endl;
-		// 	exit(0);
-		// }
-		// int sum_n_k_check = 0;
-		// double sum_alpha_check = 0;
+		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(id word_id = 0;word_id < _num_vocabulary;word_id++){
 			log_pw += _compute_second_term_of_log_probability_document(doc_id, word_id);
-			// sum_n_k_check += n_k;
-			// sum_alpha_check += alpha_k;
 		}
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		// if(abs(sum_alpha_check - Zi) > 1e-6){
-		// 	printf("%.16e\n", sum_alpha_check);
-		// 	printf("%.16e\n", Zi);
-		// 	printf("%.16e\n", abs(sum_alpha_check - Zi));
-		// }
-		// assert(abs(sum_alpha_check - Zi) < 1e-6);
-		// if(abs(sum_n_k_check - sum_word_frequency) > 1e-6){
-		// 	printf("%.16e\n", sum_n_k_check - sum_word_frequency);
-		// }
-		// assert(abs(sum_n_k_check - sum_word_frequency) < 1e-6);
-		//
-		//
-		//
-		//
-		//
-		//
-		//
-		// cout << "	" << "pw: " << fmath::expd(log_pw) << endl;
 		return log_pw;
 	}
 	double compute_log_probability_document_given_words(int doc_id, unordered_set<id> &word_ids){
 		assert(doc_id < _num_documents);
-		double log_pw = 0;
 		double Zi = 0;
 		for(const id word_id: word_ids){
 			Zi += compute_alpha_word_given_doc(word_id, doc_id);
 		}
 		assert(Zi > 0);
 		double sum_word_frequency = _sum_n_k[doc_id];
-		log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
+		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(const id word_id: word_ids){
 			log_pw += _compute_second_term_of_log_probability_document(doc_id, word_id);
 		}
@@ -386,83 +315,6 @@ public:
 		}
 		return tmp;
 	}
-	// double _compute_log_Pdocument(unordered_set<id> &word_set, int doc_id){
-	// 	assert(doc_id < _num_documents);
-	// 	double log_pw = 0;
-	// 	double Zi = _Zi[doc_id];
-	// 	// printf("%.16e\n", Zi);
-	// 	assert(Zi > 0);
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// double _sum_alpha = sum_alpha_word_given_doc(doc_id, word_set);
-	// 	// if(abs(Zi - _sum_alpha) > 1e-6){
-	// 	// 	printf("%.16e\n", Zi);
-	// 	// 	printf("%.16e\n", _sum_alpha);
-	// 	// 	printf("%.16e\n", Zi - _sum_alpha);
-	// 	// }
-	// 	// assert(abs(Zi - _sum_alpha) < 1e-6);
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	// 
-	// 	double sum_word_frequency = _sum_n_k[doc_id];
-	// 	// cout << "	" << "Zi: " << Zi << endl;
-	// 	// cout << "	" << "sum_word_frequency: " << sum_word_frequency << endl;
-	// 	log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
-	// 	// if(std::isnan(log_pw)){
-	// 	// 	cout << Zi << endl;
-	// 	// 	cout << sum_word_frequency << endl;
-	// 	// 	cout << lgamma(Zi) << endl;
-	// 	// 	cout << lgamma(Zi + sum_word_frequency) << endl;
-	// 	// 	exit(0);
-	// 	// }
-	// 	// int sum_n_k_check = 0;
-	// 	// double sum_alpha_check = 0;
-	// 	for(const id word_id: word_set){
-	// 		double alpha_k = compute_alpha_word_given_doc(word_id, doc_id);
-	// 		int n_k = get_word_count_in_doc(word_id, doc_id);
-	// 		// cout << "	" << word_id << endl;
-	// 		// cout << "	" << "alpha_k: " << alpha_k << endl;
-	// 		// cout << "	" << "n_k: " << n_k << endl;
-	// 		// cout << "	";
-	// 		// dump_vec(_word_vectors[word_id], _ndim_d);
-	// 		log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
-	// 		// sum_n_k_check += n_k;
-	// 		// sum_alpha_check += alpha_k;
-	// 	}
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	// if(abs(sum_alpha_check - Zi) > 1e-6){
-	// 	// 	printf("%.16e\n", sum_alpha_check);
-	// 	// 	printf("%.16e\n", Zi);
-	// 	// 	printf("%.16e\n", abs(sum_alpha_check - Zi));
-	// 	// }
-	// 	// assert(abs(sum_alpha_check - Zi) < 1e-6);
-	// 	// if(abs(sum_n_k_check - sum_word_frequency) > 1e-6){
-	// 	// 	printf("%.16e\n", sum_n_k_check - sum_word_frequency);
-	// 	// }
-	// 	// assert(abs(sum_n_k_check - sum_word_frequency) < 1e-6);
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	//
-	// 	// cout << "	" << "pw: " << fmath::expd(log_pw) << endl;
-	// 	return log_pw;
-	// }
 	double compute_log_prior_alpha0(double alpha0){
 		return _gamma_alpha_a * log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * log(alpha0) - _gamma_alpha_b * alpha0;
 	}
@@ -549,33 +401,19 @@ public:
 		double* target = _word_vectors[word_id];
 		assert(target != NULL);
 		std::memcpy(target, source, _ndim_d * sizeof(double));
-		// for(int i = 0;i < _ndim_d;i++){
-		// 	target[i] = source[i];
-		// }
 	}
 	void set_doc_vector(int doc_id, double* source){
 		assert(doc_id < _num_documents);
 		double* target = _doc_vectors[doc_id];
 		std::memcpy(target, source, _ndim_d * sizeof(double));
-		// for(int i = 0;i < _ndim_d;i++){
-		// 	target[i] = source[i];
-		// }
 	}
 	void update_Zi(int doc_id){
 		set_Zi(doc_id, sum_alpha_word_given_doc(doc_id));
-		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
-	// void swap_Zi_component(int doc_id, double old_value, double new_value){
-	// 	assert(doc_id < _num_documents);
-	// 	_Zi[doc_id] += new_value - old_value;
-	// 	assert(_Zi[doc_id] > 0);
-	// 	// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
-	// }
 	void set_Zi(int doc_id, double new_value){
 		assert(doc_id < _num_documents);
 		assert(new_value > 0);
 		_Zi[doc_id] = new_value;
-		// cout << "_Zi[" << doc_id << "] <- " << _Zi[doc_id] << endl;
 	}
 	template <class Archive>
 	void serialize(Archive &archive, unsigned int version)

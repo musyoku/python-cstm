@@ -13,11 +13,8 @@ private:
 	unordered_map<id, wstring> _string_by_word_id;
 	unordered_map<id, id> _hash_to_id;
 	hash<wstring> _hash_func;
-	
 public:
-	Vocab(){
-		
-	}
+	Vocab(){}
 	id add_string(wstring &str){
 		id hash = hash_string(str);
 		auto itr = _hash_to_id.find(hash);
@@ -66,10 +63,5 @@ public:
 			boost::archive::binary_iarchive iarchive(ifs);
 			iarchive >> *this;
 		}
-	}
-	void dump(){
-		for(auto elem : _string_by_word_id) {
-			wcout << elem.first << ": " << elem.second << endl;
-		} 
 	}
 };
