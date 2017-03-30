@@ -1,5 +1,6 @@
 # ignore all
 *
+test.cpp
 
 # allow any
 !*/

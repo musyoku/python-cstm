@@ -8,17 +8,19 @@
 #define GAMMA_ALPHA_B 	1		// a0のガンマ事前分布のハイパーパラメータ
 using id = size_t;
 
-double compute_dot(double* a, double* b, int length){
-	double dot = 0;
-	for(int i = 0;i < length;i++){
-		dot += a[i] * b[i];
+namespace cstm{
+	double dot(double* a, double* b, int length){
+		double dot = 0;
+		for(int i = 0;i < length;i++){
+			dot += a[i] * b[i];
+		}
+		return dot;
 	}
-	return dot;
-}
-void dump_vec(double* vec, int len){
-	std::cout << "[";
-	for(int i = 0;i < len - 1;i++){
-		std::cout << vec[i] << ", ";
+	void dump_vec(double* vec, int len){
+		std::cout << "[";
+		for(int i = 0;i < len - 1;i++){
+			std::cout << vec[i] << ", ";
+		}
+		std::cout << vec[len - 1] << "]" << std::endl;
 	}
-	std::cout << vec[len - 1] << "]" << std::endl;
 }

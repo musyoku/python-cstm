@@ -15,6 +15,7 @@
 #include "core/cstm.h"
 #include "core/vocab.h"
 using namespace boost;
+using namespace cstm;
 
 struct multiset_value_comparator {
 	bool operator()(const pair<id, double> &a, const pair<id, double> &b) {

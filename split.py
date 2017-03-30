@@ -1,9 +1,10 @@
 # coding: utf-8
 import argparse, sys, os, time, re, codecs, random
 
-def split(path, args):
-	filename = path.split("/")[-1]
-	print filename
+def split(filename, args):
+	path = args.input_dir + "/" + filename
+	filename_without_ext = filename.split(".")[0]
+	print filename_without_ext
 	sentences = []
 	with codecs.open(path, "r", "utf-8") as f:
 		for s in f:
@@ -11,7 +12,7 @@ def split(path, args):
 	num_per_file = len(sentences) // args.split
 	sentences = [sentences[i:i + num_per_file] for i in range(args.split)]
 	for i, dataset in enumerate(sentences):
-		with codecs.open("{}/{}_{}.txt".format(args.output_dir, filename, i), "w", "utf-8") as f:
+		with codecs.open("{}/{}_{}.txt".format(args.output_dir, filename_without_ext, i), "w", "utf-8") as f:
 			for sentence in dataset:
 				f.write(sentence)
 
@@ -25,7 +26,7 @@ def main(args):
 	assert args.split > 0
 	for filename in os.listdir(args.input_dir):
 		if re.search(r".txt$", filename):
-			split(args.input_dir + "/" + filename, args)
+			split(filename, args)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
