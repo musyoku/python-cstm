@@ -83,8 +83,8 @@ public:
 	int _num_word_vec_sampled;
 	int _num_doc_vec_sampled;
 	// その他
-	int _random_sampling_word_start_index;
-	int _random_sampling_doc_current_index;
+	int _random_sampling_word_index;
+	int _random_sampling_doc_index;
 	unordered_map<id, int> _num_updates_word;
 	unordered_map<int, int> _num_updates_doc;
 
@@ -105,8 +105,8 @@ public:
 		_ndim_d = 0;
 		reset_statistics();
 		_is_compiled = false;
-		_random_sampling_word_start_index = 0;
-		_random_sampling_doc_current_index = 0;
+		_random_sampling_word_index = 0;
+		_random_sampling_doc_index = 0;
 	}
 	~PyCSTM(){
 		delete _cstm;
@@ -165,10 +165,6 @@ public:
 			_cstm->update_Zi(doc_id);
 		}
 		assert(_sum_word_frequency.size() == _dataset.size());
-		// for(int i = 0;i < _sum_word_frequency.size();i++){
-		// 	cout << _sum_word_frequency[i] << ", ";
-		// }
-		// cout << endl;
 		_old_alpha_words = new double[num_docs];
 		_Zi_cache = new double[num_docs];
 		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
@@ -390,21 +386,22 @@ public:
 	}
 	void perform_mh_sampling_word(){
 		compile_if_needed();
+		// 更新する単語ベクトルをランダムに選択
+		// 一度に更新する個数は 語彙数/文書数
 		int limit = (int)(get_num_vocabulary() / (double)get_num_documents());
-		// int limit = num_vocabulary;
-		if(_random_sampling_word_start_index + limit >= _random_word_ids.size()){
+		if(_random_sampling_word_index + limit >= _random_word_ids.size()){
 			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
-			_random_sampling_word_start_index = 0;
+			_random_sampling_word_index = 0;
 		}
 		for(int i = 0;i < limit;i++){
-			id word_id = _random_word_ids[i + _random_sampling_word_start_index];
+			id word_id = _random_word_ids[i + _random_sampling_word_index];
 			double* old_vec = get_word_vector(word_id);
 			double* new_vec = draw_word_vector(old_vec);
 			accept_word_vecor_if_needed(new_vec, old_vec, word_id);
 			_num_word_vec_sampled += 1;
 			_num_updates_word[word_id] += 1;
 		}
-		_random_sampling_word_start_index += limit;
+		_random_sampling_word_index += limit;
 	}
 	bool accept_word_vecor_if_needed(double* new_word_vec, double* old_word_vec, id word_id){
 		auto itr = _docs_containing_word.find(word_id);
@@ -461,12 +458,13 @@ public:
 	}
 	void perform_mh_sampling_document(){
 		compile_if_needed();
-		_random_sampling_doc_current_index += 1;
-		if(_random_sampling_doc_current_index == _random_doc_ids.size()){
+		// 更新する文書ベクトルをランダムに1つ選択
+		_random_sampling_doc_index += 1;
+		if(_random_sampling_doc_index == _random_doc_ids.size()){
 			std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
-			_random_sampling_doc_current_index = 0;
+			_random_sampling_doc_index = 0;
 		}
-		int doc_id = _random_doc_ids[_random_sampling_doc_current_index];
+		int doc_id = _random_doc_ids[_random_sampling_doc_index];
 		double* old_vec = get_doc_vector(doc_id);
 		double* new_vec = draw_doc_vector(old_vec);
 		accept_document_vector_if_needed(new_vec, old_vec, doc_id);

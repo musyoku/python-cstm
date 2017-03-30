@@ -31,7 +31,7 @@ def main():
 
 	# 読み込み
 	dataset.add_documents(cstm)
-	cstm.compile()	# 追加し終わったら呼ぶ
+	cstm.compile()	# 文書をすべて追加し終わった時に必ず呼ぶ
 
 	num_vocab = cstm.get_num_vocabulary()
 	num_docs = cstm.get_num_documents()

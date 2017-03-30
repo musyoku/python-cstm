@@ -67,7 +67,6 @@ def add_documents(cstm):
 		sys.stdout.write("\r")
 		sys.stdout.flush()
 
-	print documents_for_group
 	with open(path_to_documents_for_group(), "wb") as f:
 		pickle.dump(documents_for_group, f)
 

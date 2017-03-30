@@ -63,25 +63,19 @@ def plot_words(words, ndim_vector, output_dir=None, filename="scatter"):
 			pylab.ylim(-4, 4)
 			pylab.savefig("{}/{}_{}-{}.png".format(output_dir, filename, i, i + 1))
 
-def plot_f(words, doc_vectors, output_dir=None, filename="f"):
+def plot_f(word_vector_pair, doc_id, doc_vector, output_dir=None, filename="f"):
 	with sns.axes_style("white", {"font.family": [fontfamily]}):
-		collection = []
-		for meta in words:
-			word = meta[1]
-			word_vector = np.asarray(meta[3], dtype=np.float32)
-			collection.append((word, word_vector))
-		for doc_id, doc_vector in enumerate(doc_vectors):
-			fig = pylab.gcf()
-			fig.set_size_inches(40.0, 20.0)
-			pylab.clf()
-			for meta in collection:
-				word, word_vector = meta
-				f = np.inner(word_vector, doc_vector)
-				y = np.random.uniform(low=-5, high=5)
-				pylab.text(f, y, word, fontsize=5)
-			pylab.xlim(-20, 20)
-			pylab.ylim(-5, 5)
-			pylab.savefig("{}/{}_{}.png".format(output_dir, filename, doc_id))
+		fig = pylab.gcf()
+		fig.set_size_inches(40.0, 20.0)
+		pylab.clf()
+		for pair in word_vector_pair:
+			word, word_vector = pair
+			f = np.inner(word_vector, doc_vector)
+			y = np.random.uniform(low=-5, high=5)
+			pylab.text(f, y, word, fontsize=5)
+		pylab.xlim(-20, 20)
+		pylab.ylim(-5, 5)
+		pylab.savefig("{}/{}_{}.png".format(output_dir, filename, doc_id))
 
 def main():
 	mkdir(args.output_dir)
@@ -130,7 +124,13 @@ def main():
 	plot_words(common_words, ndim, args.output_dir, filename="words")
 
 	# 各文書についてfをプロット
-	plot_f(common_words, doc_vectors, args.output_dir)
+	word_vector_pair = []
+	for meta in common_words:
+		word = meta[1]
+		word_vector = np.asarray(meta[3], dtype=np.float32)
+		word_vector_pair.append((word, word_vector))
+	for doc_id in xrange(doc_vectors.shape[0]):
+		plot_f(word_vector_pair, doc_id, doc_vectors[doc_id], args.output_dir)
 	raise Exception()
 
 
