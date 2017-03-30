@@ -496,14 +496,6 @@ public:
 		_num_rejection_word += 1;
 		return false;
 	}
-	void worker(int thread_id){
-		int doc_id = _random_doc_ids[_random_sampling_doc_index + thread_id];
-		double* old_vec = _old_vec_copy_thread[thread_id];
-		double* new_vec = _new_vec_copy_thread[thread_id];
-		accept_document_vector_if_needed(new_vec, old_vec, doc_id);
-		_num_doc_vec_sampled += 1;
-		_num_updates_doc[doc_id] += 1;
-	}
 	void perform_mh_sampling_document(){
 		compile_if_needed();
 		// 更新する文書ベクトルをランダムに1つ選択
@@ -530,12 +522,20 @@ public:
 			std::memcpy(_new_vec_copy_thread[i], new_vec, _cstm->_ndim_d * sizeof(double));
 		}
 		for (int i = 0;i < _num_threads;i++) {
-			_doc_threads[i] = std::thread(&PyCSTM::worker, this, i);
+			_doc_threads[i] = std::thread(&PyCSTM::worker_accept_document_vector_if_needed, this, i);
 		}
 		for (int i = 0;i < _num_threads;i++) {
 			_doc_threads[i].join();
 		}
 		_random_sampling_doc_index += _num_threads;
+	}
+	void worker_accept_document_vector_if_needed(int thread_id){
+		int doc_id = _random_doc_ids[_random_sampling_doc_index + thread_id];
+		double* old_vec = _old_vec_copy_thread[thread_id];
+		double* new_vec = _new_vec_copy_thread[thread_id];
+		accept_document_vector_if_needed(new_vec, old_vec, doc_id);
+		_num_doc_vec_sampled += 1;
+		_num_updates_doc[doc_id] += 1;
 	}
 	bool accept_document_vector_if_needed(double* new_doc_vec, double* old_doc_vec, int doc_id){
 		double original_Zi = _cstm->get_Zi(doc_id);
