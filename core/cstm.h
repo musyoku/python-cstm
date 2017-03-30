@@ -106,8 +106,7 @@ public:
 		assert(_num_documents > 0);
 		assert(_num_vocabulary > 0);
 		// ハイパーパラメータ
-		_alpha0 = Sampler::gamma(_gamma_alpha_a, _gamma_alpha_b);
-		assert(_alpha0 > 0);
+		_alpha0 = 1;
 		// メモリ確保
 		_tmp_vec = generate_vector();
 		_g0 = new double[_num_vocabulary];
@@ -291,7 +290,7 @@ public:
 	// }
 	double compute_log_probability_document(int doc_id){
 		assert(doc_id < _num_documents);
-		double log_pw = _log_likelihood_first_term[doc_id];
+		double log_pw = 0;
 		double Zi = _Zi[doc_id];
 		// printf("%.16e\n", Zi);
 		assert(Zi > 0);
@@ -361,7 +360,7 @@ public:
 	}
 	double compute_log_probability_document_given_words(int doc_id, unordered_set<id> &word_ids){
 		assert(doc_id < _num_documents);
-		double log_pw = _log_likelihood_first_term[doc_id];
+		double log_pw = 0;
 		double Zi = 0;
 		for(const id word_id: word_ids){
 			Zi += compute_alpha_word_given_doc(word_id, doc_id);

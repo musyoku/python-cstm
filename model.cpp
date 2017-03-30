@@ -66,8 +66,8 @@ public:
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double* _old_alpha_words;
-	double* _new_Zi;
-	bool _compiled;
+	double* _Zi_cache;
+	bool _is_compiled;
 	int _ndim_d;
 	// 統計
 	// MH法で採択された回数
@@ -100,10 +100,10 @@ public:
 		_old_vec_copy = NULL;
 		_new_vec_copy = NULL;
 		_old_alpha_words = NULL;
-		_new_Zi = NULL;
+		_Zi_cache = NULL;
 		_ndim_d = 0;
 		reset_statistics();
-		_compiled = false;
+		_is_compiled = false;
 		_random_sampling_word_start_index = 0;
 		_random_sampling_doc_current_index = 0;
 	}
@@ -119,13 +119,19 @@ public:
 		if(_old_alpha_words != NULL){
 			delete[] _old_alpha_words;
 		}
-		if(_new_Zi != NULL){
-			delete[] _new_Zi;
+		if(_Zi_cache != NULL){
+			delete[] _Zi_cache;
 		}
+	}
+	void compile_if_needed(){
+		if(_is_compiled){
+			return;
+		}
+		compile();
 	}
 	void compile(){
 		assert(_ndim_d > 0);
-		assert(_compiled == false);
+		assert(_is_compiled == false);
 		int num_docs = _dataset.size();
 		int num_vocabulary = _word_frequency.size();
 		_old_vec_copy = new double[_ndim_d];
@@ -163,9 +169,10 @@ public:
 		// }
 		// cout << endl;
 		_old_alpha_words = new double[num_docs];
-		_new_Zi = new double[num_docs];
+		_Zi_cache = new double[num_docs];
 		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
 		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
+		_is_compiled = true;
 	}
 	int add_document(string filename){
 		wifstream ifs(filename.c_str());
@@ -247,6 +254,9 @@ public:
 	}
 	double get_mh_acceptance_rate_for_word_vector(){
 		return _num_acceptance_word / (double)(_num_acceptance_word + _num_rejection_word);
+	}
+	double get_mh_acceptance_rate_for_alpha0(){
+		return _num_acceptance_alpha0 / (double)(_num_acceptance_alpha0 + _num_rejection_alpha0);
 	}
 	double* get_word_vector(id word_id){
 		double* old_vec = _cstm->get_word_vector(word_id);
@@ -368,9 +378,9 @@ public:
 		int n = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
 			unordered_set<id> &word_ids = _word_ids_in_doc[doc_id];
-			log_pw += _cstm->compute_log_probability_document_given_words(doc_id, word_ids) / word_ids.size();
+			log_pw += _cstm->compute_log_probability_document_given_words(doc_id, word_ids);
 		}
-		return fmath::expd(-log_pw / get_num_documents());
+		return fmath::expd(-log_pw / get_sum_word_frequency());
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
@@ -378,7 +388,7 @@ public:
 		}
 	}
 	void perform_mh_sampling_word(){
-		assert(_cstm != NULL);
+		compile_if_needed();
 		int limit = (int)(get_num_vocabulary() / (double)get_num_documents());
 		// int limit = num_vocabulary;
 		if(_random_sampling_word_start_index + limit >= _random_word_ids.size()){
@@ -392,7 +402,6 @@ public:
 			accept_word_vecor_if_needed(new_vec, old_vec, word_id);
 			_num_word_vec_sampled += 1;
 			_num_updates_word[word_id] += 1;
-			exit(0);
 		}
 		_random_sampling_word_start_index += limit;
 	}
@@ -401,7 +410,7 @@ public:
 		assert(itr != _docs_containing_word.end());
 		unordered_set<int> &docs = itr->second;
 		assert(docs.size() > 0);
-		// _cstm->set_word_vector(word_id, old_word_vec);
+		// 以前の単語ベクトルの尤度
 		double log_pw_old = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
 			double old_alpha_word = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
@@ -410,59 +419,39 @@ public:
 			log_pw_old += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, old_Zi, old_alpha_word);
 			_old_alpha_words[doc_id] = old_alpha_word;
 		}
-		// _cstm->set_word_vector(word_id, new_word_vec);	// 新しい単語ベクトルで差し替える
+		// 新しい単語ベクトルの尤度
 		double g0 = _cstm->get_g0_of_word(word_id);
 		double log_pw_new = 0;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
 			double* doc_vec = _cstm->get_doc_vector(doc_id);
 			double new_alpha_word = _cstm->_compute_alpha_word(new_word_vec, doc_vec, g0);
 			double old_alpha_word = _old_alpha_words[doc_id];
-			// cout << old_alpha_word << ", " << new_alpha_word << endl;
 			// Ziの計算を簡略化
-			// double old_Zi = _new_Zi[doc_id];
 			double old_Zi = _cstm->get_Zi(doc_id);
 			double new_Zi = old_Zi - old_alpha_word + new_alpha_word;
 			assert(old_Zi >= old_alpha_word);
 			assert(new_Zi >= new_alpha_word);
-			// _cstm->set_Zi(doc_id, new_Zi);
 			int n_k = _cstm->get_word_count_in_doc(word_id, doc_id);
 			log_pw_new += _cstm->_compute_reduced_log_probability_document(word_id, doc_id, n_k, new_Zi, new_alpha_word);
-			_new_Zi[doc_id] = new_Zi;
-			
-			// _cstm->swap_Zi_component(doc_id, new_alpha_word, old_alpha_word);	// 元に戻す
-			// double alpha = _cstm->compute_alpha_word_given_doc(word_id, doc_id);
-			// log_pw_old += log(alpha);
+			_Zi_cache[doc_id] = new_Zi;
 		}
 		assert(log_pw_old != 0);
 		assert(log_pw_new != 0);
-		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_word_vec, old_word_vec);
-		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_word_vec, new_word_vec);
+		// 事前分布
 		double log_prior_old = _cstm->compute_log_prior_vector(old_word_vec);
 		double log_prior_new = _cstm->compute_log_prior_vector(new_word_vec);
-
 		assert(log_prior_old != 0);
 		assert(log_prior_new != 0);
-		assert(log_pw_new != log_pw_old);
-		assert(log_prior_new != log_prior_old);
-		// dump_vec(old_word_vec, _cstm->_ndim_d);
-		// dump_vec(new_word_vec, _cstm->_ndim_d);
-
+		// 採択率
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
-		// double log_acceptance_rate = log_pw_new - log_pw_old;
-		// double log_acceptance_rate = log_prior_new - log_prior_old;
-		// double log_acceptance_rate = log_pw_new - log_pw_old;
 		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
-
-		// if(acceptance_ratio < 1){
-		// 	return false;
-		// }
-		// return true;
 		double bernoulli = Sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_word += 1;
+			// 新しいベクトルをセット
 			_cstm->set_word_vector(word_id, new_word_vec);
 			for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-				_cstm->set_Zi(doc_id, _new_Zi[doc_id]);
+				_cstm->set_Zi(doc_id, _Zi_cache[doc_id]);
 			}
 			return true;
 		}
@@ -470,7 +459,7 @@ public:
 		return false;
 	}
 	void perform_mh_sampling_document(){
-		assert(_cstm != NULL);
+		compile_if_needed();
 		_random_sampling_doc_current_index += 1;
 		if(_random_sampling_doc_current_index == _random_doc_ids.size()){
 			std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
@@ -479,88 +468,63 @@ public:
 		int doc_id = _random_doc_ids[_random_sampling_doc_current_index];
 		double* old_vec = get_doc_vector(doc_id);
 		double* new_vec = draw_doc_vector(old_vec);
-		if(mh_accept_doc_vec(new_vec, old_vec, doc_id)){
-			_cstm->set_doc_vector(doc_id, new_vec);
-		}
+		accept_document_vector_if_needed(new_vec, old_vec, doc_id);
 		_num_doc_vec_sampled += 1;
 		_num_updates_doc[doc_id] += 1;
 	}
-	bool mh_accept_doc_vec(double* new_vec, double* old_vec, int doc_id){
+	bool accept_document_vector_if_needed(double* new_doc_vec, double* old_doc_vec, int doc_id){
 		double original_Zi = _cstm->get_Zi(doc_id);
-		// _cstm->set_doc_vector(doc_id, old_vec);
+		// 以前の文書ベクトルの尤度
 		double log_pw_old = _cstm->compute_log_probability_document(doc_id);
-		// //
-		// //
-		// //
-		// //
-		// //
-		// //
-		// //
-		// double _log_pw_old = _cstm->_compute_log_Pdocument(doc_id);
-		// if(_log_pw_old != log_pw_old){
-		// 	printf("%.16e == ", log_pw_old);
-		// 	printf("%.16e; ", _log_pw_old);
-		// 	printf("%.16e\n", log_pw_old - _log_pw_old);
-		// 	exit(0);
-		// }
-		// //
-		// //
-		// //
-		// //
-		// //
-		// //
-		// //
-		// //
-		_cstm->set_doc_vector(doc_id, new_vec);
+		// 新しい文書ベクトルの尤度
+		_cstm->set_doc_vector(doc_id, new_doc_vec);
 		_cstm->update_Zi(doc_id);
 		double log_pw_new = _cstm->compute_log_probability_document(doc_id);
-		// double log_t_given_old = _cstm->compute_log_Pvector_doc(new_vec, old_vec);
-		// double log_t_given_new = _cstm->compute_log_Pvector_doc(old_vec, new_vec);
-		double log_prior_old = _cstm->compute_log_prior_vector(old_vec);
-		double log_prior_new = _cstm->compute_log_prior_vector(new_vec);
-		
+		assert(log_pw_old != 0);
+		assert(log_pw_new != 0);
+		// 事前分布
+		double log_prior_old = _cstm->compute_log_prior_vector(old_doc_vec);
+		double log_prior_new = _cstm->compute_log_prior_vector(new_doc_vec);
+		// 採択率
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
-		// double log_acceptance_rate = log_pw_new - log_pw_old;
 		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
 		double bernoulli = Sampler::uniform(0, 1);
-		// if(acceptance_ratio < 1){
-		// 	return false;
-		// }
-		// return true;
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_doc += 1;
 			return true;
 		}
-		_cstm->set_doc_vector(doc_id, old_vec);
+		// 元に戻す
+		_cstm->set_doc_vector(doc_id, old_doc_vec);
 		_cstm->set_Zi(doc_id, original_Zi);
 		_num_rejection_doc += 1;
 		return false;
 	}
 	void perform_mh_sampling_alpha0(){
-		assert(_cstm != NULL);
+		compile_if_needed();
 		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
 		double old_alpha0 = _cstm->get_alpha0();
 		double new_alpha0 = _cstm->draw_alpha0(old_alpha0);
-		if(mh_accept_alpha0(new_alpha0, old_alpha0)){
-			// cout << "alpha0 <- " << new_alpha0 << endl;
-			_cstm->set_alpha0(new_alpha0);
-		}
+		accept_alpha0_if_needed(new_alpha0, old_alpha0);
 	}
-	bool mh_accept_alpha0(double new_alpha0, double old_alpha0){
+	bool accept_alpha0_if_needed(double new_alpha0, double old_alpha0){
 		int num_docs = _dataset.size();
+		// 以前のa0の尤度
 		double log_pw_old= 0;
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
-			log_pw_old+= _cstm->compute_log_probability_document(doc_id);
+			log_pw_old += _cstm->compute_log_probability_document(doc_id);
+			_Zi_cache[doc_id] = _cstm->get_Zi(doc_id);
 		}
+		// 新しいa0の尤度
 		_cstm->set_alpha0(new_alpha0);
 		update_all_Zi();
 		double log_pw_new = 0;
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			log_pw_new += _cstm->compute_log_probability_document(doc_id);
 		}
+		// 事前分布
 		double log_prior_old = _cstm->compute_log_prior_alpha0(old_alpha0);
 		double log_prior_new = _cstm->compute_log_prior_alpha0(new_alpha0);
-
+		// 採択率
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
 		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
 		double bernoulli = Sampler::uniform(0, 1);
@@ -569,8 +533,11 @@ public:
 			return true;
 		}
 		_num_rejection_alpha0 += 1;
+		// 元に戻す
 		_cstm->set_alpha0(old_alpha0);
-		update_all_Zi();
+		for(int doc_id = 0;doc_id < num_docs;doc_id++){
+			_cstm->set_Zi(doc_id, _Zi_cache[doc_id]);
+		}
 		return false;
 	}
 	bool load(string dirname){
@@ -589,8 +556,8 @@ public:
 		if(_old_alpha_words == NULL){
 			_old_alpha_words = new double[num_docs];
 		}
-		if(_new_Zi == NULL){
-			_new_Zi = new double[num_docs];
+		if(_Zi_cache == NULL){
+			_Zi_cache = new double[num_docs];
 		}
 		return true;
 	}
@@ -643,6 +610,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
 	.def("get_mh_acceptance_rate_for_word_vector", &PyCSTM::get_mh_acceptance_rate_for_word_vector)
 	.def("get_mh_acceptance_rate_for_doc_vector", &PyCSTM::get_mh_acceptance_rate_for_doc_vector)
+	.def("get_mh_acceptance_rate_for_alpha0", &PyCSTM::get_mh_acceptance_rate_for_alpha0)
 	.def("get_num_doc_vec_sampled", &PyCSTM::get_num_doc_vec_sampled)
 	.def("get_num_word_vec_sampled", &PyCSTM::get_num_word_vec_sampled)
 	.def("get_alpha0", &PyCSTM::get_alpha0)
