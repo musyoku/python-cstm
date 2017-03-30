@@ -28,6 +28,7 @@ def main():
 	cstm.set_sigma_alpha0(0.2)
 	cstm.set_gamma_alpha_a(5)
 	cstm.set_gamma_alpha_b(500)
+	cstm.set_num_threads(2)		# 文書ベクトルの更新に使うスレッド数
 
 	# 読み込み
 	dataset.add_documents(cstm)
@@ -54,12 +55,15 @@ def main():
 			sys.stdout.flush()
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
-			print "\rEpoch", epoch
+			print stdout.CLEAR + "\rEpoch", epoch
 			print "	", cstm.compute_perplexity(), "ppl -", cstm.compute_log_likelihood_data(), "log likelihood -",  int((cstm.get_num_word_vec_sampled() + cstm.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec", "-", int(total_time / 60.0), "min total"
 			# 実際に受理・棄却された回数の統計を取ってあるので表示
 			print "	MH acceptance:"
 			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector(), ", a0:", cstm.get_mh_acceptance_rate_for_alpha0()
 			print "	alpha0:", cstm.get_alpha0()
+
+			cstm.debug_num_updates_word()
+			cstm.debug_num_updates_doc()
 			
 			cstm.save(args.model_dir)
 			cstm.reset_statistics()	# 統計をリセット. 結果表示用の統計なので学習とは無関係
