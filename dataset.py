@@ -42,8 +42,8 @@ def add_documents(cstm):
 	# 文書にグループが存在しない場合
 	if len(groups) == 0:
 		for filename in filelist:
-			if re.search(r".txt$", filename):
-				sys.stdout.write("\r" + " "*40)
+			if filename.endswith(".txt"):
+				sys.stdout.write(stdout.CLEAR)
 				sys.stdout.write("\rLoading {}".format(filename))
 				sys.stdout.flush()
 				cstm.add_document("{}/{}".format(args.document_dir, filename));

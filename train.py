@@ -62,6 +62,8 @@ def main():
 			print "		document:", cstm.get_mh_acceptance_rate_for_doc_vector(), ", word:", cstm.get_mh_acceptance_rate_for_word_vector(), ", a0:", cstm.get_mh_acceptance_rate_for_alpha0()
 			print "	alpha0:", cstm.get_alpha0()
 
+			# 各文書・各単語ベクトルについて、最大更新回数と最小更新回数を表示
+			# maxとminがほぼ同じなら均等に学習できている
 			cstm.debug_num_updates_word()
 			cstm.debug_num_updates_doc()
 			

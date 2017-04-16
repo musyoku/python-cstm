@@ -12,9 +12,8 @@
 #include <set>
 #include <unordered_set>
 #include <unordered_map> 
-#include "core/fmath.h"
-#include "core/cstm.h"
-#include "core/vocab.h"
+#include "src/cstm.h"
+#include "src/vocab.h"
 using namespace boost;
 using namespace cstm;
 
@@ -204,8 +203,8 @@ public:
 		assert(_sum_word_frequency.size() == _dataset.size());
 		_old_alpha_words = new double[num_docs];
 		_Zi_cache = new double[num_docs];
-		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
-		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
+		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), sampler::mt);
+		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), sampler::mt);
 		_is_compiled = true;
 	}
 	int add_document(string filename){
@@ -227,7 +226,7 @@ public:
 		for(int i = 0;i < sentences.size();i++){
 			rand_indices.push_back(i);
 		}
-		shuffle(rand_indices.begin(), rand_indices.end(), Sampler::mt);	// データをシャッフル
+		shuffle(rand_indices.begin(), rand_indices.end(), sampler::mt);	// データをシャッフル
 		for(int i = 0;i < rand_indices.size();i++){
 			wstring &sentence = sentences[rand_indices[i]];
 			vector<wstring> words;
@@ -417,7 +416,7 @@ public:
 			unordered_set<id> &word_ids = _word_ids_in_doc[doc_id];
 			log_pw += _cstm->compute_log_probability_document_given_words(doc_id, word_ids);
 		}
-		return fmath::expd(-log_pw / get_sum_word_frequency());
+		return cstm::exp(-log_pw / get_sum_word_frequency());
 	}
 	void update_all_Zi(){
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
@@ -430,7 +429,7 @@ public:
 		// 一度に更新する個数は 語彙数/文書数
 		int limit = (int)(get_num_vocabulary() / (double)get_num_documents());
 		if(_random_sampling_word_index + limit >= _random_word_ids.size()){
-			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), Sampler::mt);
+			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), sampler::mt);
 			_random_sampling_word_index = 0;
 		}
 		for(int i = 0;i < limit;i++){
@@ -482,8 +481,8 @@ public:
 		assert(log_prior_new != 0);
 		// 採択率
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
-		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
-		double bernoulli = Sampler::uniform(0, 1);
+		double acceptance_ratio = std::min(1.0, cstm::exp(log_acceptance_rate));
+		double bernoulli = sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_word += 1;
 			// 新しいベクトルをセット
@@ -500,7 +499,7 @@ public:
 		compile_if_needed();
 		// 更新する文書ベクトルをランダムに1つ選択
 		if(_random_sampling_doc_index + _num_threads >= _random_doc_ids.size()){
-			std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), Sampler::mt);
+			std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), sampler::mt);
 			_random_sampling_doc_index = 0;
 		}
 		if(_num_threads == 1){
@@ -552,8 +551,8 @@ public:
 		double log_prior_new = _cstm->compute_log_prior_vector(new_doc_vec);
 		// 採択率
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
-		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
-		double bernoulli = Sampler::uniform(0, 1);
+		double acceptance_ratio = std::min(1.0, cstm::exp(log_acceptance_rate));
+		double bernoulli = sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_doc += 1;
 			return true;
@@ -566,7 +565,7 @@ public:
 	}
 	void perform_mh_sampling_alpha0(){
 		compile_if_needed();
-		int doc_id = Sampler::uniform_int(0, _cstm->_num_documents - 1);
+		int doc_id = sampler::uniform_int(0, _cstm->_num_documents - 1);
 		double old_alpha0 = _cstm->get_alpha0();
 		double new_alpha0 = _cstm->draw_alpha0(old_alpha0);
 		accept_alpha0_if_needed(new_alpha0, old_alpha0);
@@ -591,8 +590,8 @@ public:
 		double log_prior_new = _cstm->compute_log_prior_alpha0(new_alpha0);
 		// 採択率
 		double log_acceptance_rate = log_pw_new + log_prior_new - log_pw_old - log_prior_old;
-		double acceptance_ratio = std::min(1.0, fmath::expd(log_acceptance_rate));
-		double bernoulli = Sampler::uniform(0, 1);
+		double acceptance_ratio = std::min(1.0, cstm::exp(log_acceptance_rate));
+		double bernoulli = sampler::uniform(0, 1);
 		if(bernoulli <= acceptance_ratio){
 			_num_acceptance_alpha0 += 1;
 			return true;

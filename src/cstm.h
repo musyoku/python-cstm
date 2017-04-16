@@ -10,7 +10,6 @@
 #include <random>
 #include <fstream>
 #include "common.h"
-#include "fmath.h"
 #include "sampler.h"
 using namespace std;
 #define PI 3.14159265358979323846	// 直書き
@@ -189,13 +188,13 @@ namespace cstm{
 		_sum_word_frequency += 1;
 	}
 	double generate_noise_from_standard_normal_distribution(){
-		return _standard_normal_distribution(Sampler::minstd);
+		return _standard_normal_distribution(sampler::minstd);
 	}
 	double generate_noise_doc(){
-		return _noise_doc(Sampler::minstd);
+		return _noise_doc(sampler::minstd);
 	}
 	double generate_noise_word(){
-		return _noise_word(Sampler::minstd);
+		return _noise_word(sampler::minstd);
 	}
 	double* generate_vector(){
 		double* vec = new double[_ndim_d];
@@ -217,8 +216,8 @@ namespace cstm{
 		return _tmp_vec;
 	}
 	double draw_alpha0(double old_alpha0){
-		double z = _noise_alpha0(Sampler::minstd);
-		return old_alpha0 * fmath::expd(z);
+		double z = _noise_alpha0(sampler::minstd);
+		return old_alpha0 * cstm::exp(z);
 	}
 	double sum_alpha_word_given_doc(int doc_id){
 		assert(doc_id < _num_documents);
@@ -241,7 +240,7 @@ namespace cstm{
 		assert(doc_vec != NULL);
 		assert(g0 > 0);
 		double f = cstm::dot(word_vec, doc_vec, _ndim_d);
-		double alpha = _alpha0 * g0 * fmath::expd(f);
+		double alpha = _alpha0 * g0 * cstm::exp(f);
 		assert(alpha > 0);
 		return alpha;
 	}
