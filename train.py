@@ -10,10 +10,10 @@ class stdout:
 	END = "\033[0m"
 	CLEAR = "\033[2K"
 
-def mkdir(dir):
-	assert dir is not None
+def mkdir(target):
+	assert target is not None
 	try:
-		os.mkdir(dir)
+		os.mkdir(target)
 	except:
 		pass
 
@@ -32,7 +32,6 @@ def main():
 
 	# 読み込み
 	dataset.add_documents(cstm)
-	cstm.compile()	# 文書をすべて追加し終わった時に必ず呼ぶ
 
 	num_vocab = cstm.get_num_vocabulary()
 	num_docs = cstm.get_num_documents()

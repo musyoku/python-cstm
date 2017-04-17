@@ -18,7 +18,7 @@ using namespace boost;
 using namespace cstm;
 
 struct multiset_value_comparator {
-	bool operator()(const pair<id, double> &a, const pair<id, double> &b) {
+	bool operator()(const pair<id, int> &a, const pair<id, int> &b) {
 		return a.second > b.second;
 	}   
 };
@@ -53,7 +53,7 @@ python::list list_from_vector(vector<T> &vec){
 	 return list;
 }
 
-class PyCSTM{
+class PyTrainer{
 public:
 	CSTM* _cstm;
 	Vocab* _vocab;
@@ -92,7 +92,7 @@ public:
 	unordered_map<id, int> _num_updates_word;
 	unordered_map<int, int> _num_updates_doc;
 
-	PyCSTM(){
+	PyTrainer(){
 		setlocale(LC_CTYPE, "ja_JP.UTF-8");
 		ios_base::sync_with_stdio(false);
 		locale default_loc("ja_JP.UTF-8");
@@ -116,7 +116,7 @@ public:
 		_random_sampling_word_index = 0;
 		_random_sampling_doc_index = 0;
 	}
-	~PyCSTM(){
+	~PyTrainer(){
 		delete _cstm;
 		delete _vocab;
 		if(_old_vec_copy != NULL){
@@ -161,7 +161,8 @@ public:
 		assert(_ndim_d > 0);
 		assert(_is_compiled == false);
 		int num_docs = _dataset.size();
-		int num_vocabulary = _word_frequency.size();
+		int vocabulary_size = _word_frequency.size();
+		// キャッシュ
 		_old_vec_copy = new double[_ndim_d];
 		_new_vec_copy = new double[_ndim_d];
 		_old_vec_copy_thread = new double*[_num_threads];
@@ -174,15 +175,12 @@ public:
 		}
 		_doc_threads = new std::thread[_num_threads];
 		// 単語のランダムサンプリング用
-		for(id word_id = 0;word_id < num_vocabulary;word_id++){
+		for(id word_id = 0;word_id < vocabulary_size;word_id++){
 			_random_word_ids.push_back(word_id);
 			_num_updates_word[word_id] = 0;
 		}
 		// CSTM
-		_cstm->set_ndim_d(_ndim_d);
-		_cstm->set_num_documents(num_docs);
-		_cstm->set_num_vocabulary(num_vocabulary);
-		_cstm->init();
+		_cstm->_init_cache(_ndim_d, vocabulary_size, num_docs);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
 			vector<vector<id>> &dataset = _dataset[doc_id];
 			for(int data_index = 0;data_index < dataset.size();data_index++){
@@ -264,8 +262,8 @@ public:
 	int get_num_documents(){
 		return _cstm->_num_documents;
 	}
-	int get_num_vocabulary(){
-		return _cstm->_num_vocabulary;
+	int get_vocabulary_size(){
+		return _cstm->_vocabulary_size;
 	}
 	int get_ndim_d(){
 		return _cstm->_ndim_d;
@@ -335,61 +333,6 @@ public:
 	void set_gamma_alpha_b(double gamma_alpha_b){
 		_cstm->_gamma_alpha_b = gamma_alpha_b;
 	}
-	python::list convert_vector_to_list(double* vector){
-		python::list vector_list;
-		for(int i = 0;i < _cstm->_ndim_d;i++){
-			vector_list.append(vector[i]);
-		}
-		return vector_list;
-	}
-	python::list get_word_vectors(){
-		python::list vector_array;
-		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
-			python::list vector_list;
-			double* vector = get_word_vector(word_id);
-			vector_array.append(convert_vector_to_list(vector));
-		}
-		return vector_array;
-	}
-	python::list get_doc_vectors(){
-		python::list vector_array;
-		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
-			python::list vector_list;
-			double* vector = get_doc_vector(doc_id);
-			for(int i = 0;i < _cstm->_ndim_d;i++){
-				vector_list.append(vector[i]);
-			}
-			vector_array.append(vector_list);
-		}
-		return vector_array;
-	}
-	// 出現頻度が高い単語とベクトルのペアを返す
-	python::list get_high_freq_words(size_t threshold = 100){
-		python::list result;
-		std::pair<id, double> pair;
-		multiset<std::pair<id, double>, multiset_value_comparator> ranking;
-		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
-			int count = _word_frequency[word_id];
-			pair.first = word_id;
-			pair.second = count;
-			ranking.insert(pair);
-		}
-		auto itr = ranking.begin();
-		for(int n = 0;n < std::min(threshold, ranking.size());n++){
-			python::list tuple;
-			id word_id = itr->first;
-			wstring word = _vocab->word_id_to_string(word_id);
-			double* vector = get_word_vector(word_id);
-			int count = itr->second;
-			tuple.append(word_id);
-			tuple.append(word);
-			tuple.append(count);
-			tuple.append(convert_vector_to_list(vector));
-			result.append(tuple);
-			itr++;
-		}
-		return result;
-	}
 	void reset_statistics(){
 		_num_acceptance_doc = 0;
 		_num_acceptance_word = 0;
@@ -427,7 +370,7 @@ public:
 		compile_if_needed();
 		// 更新する単語ベクトルをランダムに選択
 		// 一度に更新する個数は 語彙数/文書数
-		int limit = (int)(get_num_vocabulary() / (double)get_num_documents());
+		int limit = (int)(get_vocabulary_size() / (double)get_num_documents());
 		if(_random_sampling_word_index + limit >= _random_word_ids.size()){
 			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), sampler::mt);
 			_random_sampling_word_index = 0;
@@ -521,7 +464,7 @@ public:
 			std::memcpy(_new_vec_copy_thread[i], new_vec, _cstm->_ndim_d * sizeof(double));
 		}
 		for (int i = 0;i < _num_threads;i++) {
-			_doc_threads[i] = std::thread(&PyCSTM::worker_accept_document_vector_if_needed, this, i);
+			_doc_threads[i] = std::thread(&PyTrainer::worker_accept_document_vector_if_needed, this, i);
 		}
 		for (int i = 0;i < _num_threads;i++) {
 			_doc_threads[i].join();
@@ -604,35 +547,21 @@ public:
 		}
 		return false;
 	}
-	bool load(string dirname){
-		_vocab->load(dirname + "/cstm.vocab");
-		if(_cstm->load(dirname + "/cstm.model") == false){
-			return false;
-		}
-		_ndim_d = _cstm->_ndim_d;
-		if(_old_vec_copy == NULL){
-			_old_vec_copy = new double[_ndim_d];
-		}
-		if(_new_vec_copy == NULL){
-			_new_vec_copy = new double[_ndim_d];
-		}
-		int num_docs = _cstm->_num_documents;
-		if(_old_alpha_words == NULL){
-			_old_alpha_words = new double[num_docs];
-		}
-		if(_Zi_cache == NULL){
-			_Zi_cache = new double[num_docs];
-		}
-		return true;
+	void save(string filename){
+		std::ofstream ofs(filename);
+		boost::archive::binary_oarchive oarchive(ofs);
+		oarchive << *_vocab;
+		oarchive << *_cstm;
+		oarchive << _word_frequency;
+		oarchive << _word_ids_in_doc;
+		oarchive << _docs_containing_word;
+		oarchive << _sum_word_frequency;
 	}
-	void save(string dirname){
-		_vocab->save(dirname + "/cstm.vocab");
-		_cstm->save(dirname + "/cstm.model");
-	}
-	void debug_num_updates_word(){
+	// デバッグ用
+	void _debug_num_updates_word(){
 		int max = 0;
 		int min = -1;
-		for(id word_id = 0;word_id < get_num_vocabulary();word_id++){
+		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
 			int count = _num_updates_word[word_id];
 			if(count > max){
 				max = count;
@@ -643,7 +572,7 @@ public:
 		}
 		cout << "max: " << max << ", min: " << min << endl;
 	}
-	void debug_num_updates_doc(){
+	void _debug_num_updates_doc(){
 		int max = 0;
 		int min = -1;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
@@ -659,40 +588,155 @@ public:
 	}
 };
 
+class PyCSTM{
+public:
+	CSTM* _cstm;
+	Vocab* _vocab;
+	unordered_map<id, int> _word_frequency;
+	vector<unordered_set<id>> _word_ids_in_doc;
+	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
+	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
+	double* _vec_copy;
+	PyCSTM(string filename){
+		assert(load(filename) == true);
+		int ndim_d = get_ndim_d();
+		assert(ndim_d > 0);
+		_vec_copy = new double[ndim_d];
+	}
+	~PyCSTM(){
+		delete _cstm;
+		delete _vocab;
+		delete[] _vec_copy;
+	}
+	bool load(string filename){
+		std::ifstream ifs(filename);
+		if(ifs.good()){
+			_vocab = new Vocab();
+			_cstm = new CSTM();
+			boost::archive::binary_iarchive iarchive(ifs);
+			iarchive >> *_vocab;
+			iarchive >> *_cstm;
+			iarchive >> _word_frequency;
+			iarchive >> _word_ids_in_doc;
+			iarchive >> _docs_containing_word;
+			iarchive >> _sum_word_frequency;
+			return true;
+		}
+		return false;
+	}
+	int get_num_documents(){
+		return _cstm->_num_documents;
+	}
+	int get_vocabulary_size(){
+		return _cstm->_vocabulary_size;
+	}
+	int get_ndim_d(){
+		return _cstm->_ndim_d;
+	}
+	int get_sum_word_frequency(){
+		return std::accumulate(_sum_word_frequency.begin(), _sum_word_frequency.end(), 0);
+	}
+	double get_alpha0(){
+		return _cstm->_alpha0;
+	}
+	double* get_word_vector(id word_id){
+		double* original_vec = _cstm->get_word_vector(word_id);
+		std::memcpy(_vec_copy, original_vec, _cstm->_ndim_d * sizeof(double));
+		return _vec_copy;
+	}
+	double* get_doc_vector(int doc_id){
+		double* original_vec = _cstm->get_doc_vector(doc_id);
+		std::memcpy(_vec_copy, original_vec, _cstm->_ndim_d * sizeof(double));
+		return _vec_copy;
+	}
+	python::list convert_vector_to_list(double* vector){
+		python::list vector_list;
+		for(int i = 0;i < _cstm->_ndim_d;i++){
+			vector_list.append(vector[i]);
+		}
+		return vector_list;
+	}
+	python::list get_word_vectors(){
+		python::list vector_array;
+		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
+			python::list vector_list;
+			double* vector = get_word_vector(word_id);
+			vector_array.append(convert_vector_to_list(vector));
+		}
+		return vector_array;
+	}
+	python::list get_doc_vectors(){
+		python::list vector_array;
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			python::list vector_list;
+			double* vector = get_doc_vector(doc_id);
+			for(int i = 0;i < _cstm->_ndim_d;i++){
+				vector_list.append(vector[i]);
+			}
+			vector_array.append(vector_list);
+		}
+		return vector_array;
+	}
+	// 出現頻度が高い単語とベクトルのペアを返す
+	python::list get_high_freq_words(size_t size = 100){
+		python::list result;
+		std::pair<id, int> pair;
+		multiset<std::pair<id, int>, multiset_value_comparator> ranking;
+		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
+			int count = _word_frequency[word_id];
+			pair.first = word_id;
+			pair.second = count;
+			ranking.insert(pair);
+		}
+		auto itr = ranking.begin();
+		for(int n = 0;n < std::min(size, ranking.size());n++){
+			python::list tuple;
+			id word_id = itr->first;
+			wstring word = _vocab->word_id_to_string(word_id);
+			double* vector = get_word_vector(word_id);
+			int count = itr->second;
+			tuple.append(word_id);
+			tuple.append(word);
+			tuple.append(count);
+			tuple.append(convert_vector_to_list(vector));
+			result.append(tuple);
+			itr++;
+		}
+		return result;
+	}
+};
+
 BOOST_PYTHON_MODULE(model){
-	python::class_<PyCSTM>("cstm")
-	.def(python::init<>())
-	.def("add_document", &PyCSTM::add_document)
-	.def("compile", &PyCSTM::compile)
-	.def("reset_statistics", &PyCSTM::reset_statistics)
-	.def("get_num_vocabulary", &PyCSTM::get_num_vocabulary)
-	.def("get_num_documents", &PyCSTM::get_num_documents)
-	.def("get_sum_word_frequency", &PyCSTM::get_sum_word_frequency)
-	.def("get_ndim_d", &PyCSTM::get_ndim_d)
-	.def("get_word_vectors", &PyCSTM::get_word_vectors)
-	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
-	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
-	.def("get_mh_acceptance_rate_for_word_vector", &PyCSTM::get_mh_acceptance_rate_for_word_vector)
-	.def("get_mh_acceptance_rate_for_doc_vector", &PyCSTM::get_mh_acceptance_rate_for_doc_vector)
-	.def("get_mh_acceptance_rate_for_alpha0", &PyCSTM::get_mh_acceptance_rate_for_alpha0)
-	.def("get_num_doc_vec_sampled", &PyCSTM::get_num_doc_vec_sampled)
-	.def("get_num_word_vec_sampled", &PyCSTM::get_num_word_vec_sampled)
-	.def("get_alpha0", &PyCSTM::get_alpha0)
-	.def("set_ndim_d", &PyCSTM::set_ndim_d)
-	.def("set_alpha0", &PyCSTM::set_alpha0)
-	.def("set_sigma_u", &PyCSTM::set_sigma_u)
-	.def("set_sigma_phi", &PyCSTM::set_sigma_phi)
-	.def("set_sigma_alpha0", &PyCSTM::set_sigma_alpha0)
-	.def("set_gamma_alpha_a", &PyCSTM::set_gamma_alpha_a)
-	.def("set_gamma_alpha_b", &PyCSTM::set_gamma_alpha_b)
-	.def("set_num_threads", &PyCSTM::set_num_threads)
-	.def("perform_mh_sampling_word", &PyCSTM::perform_mh_sampling_word)
-	.def("perform_mh_sampling_document", &PyCSTM::perform_mh_sampling_document)
-	.def("perform_mh_sampling_alpha0", &PyCSTM::perform_mh_sampling_alpha0)
-	.def("compute_perplexity", &PyCSTM::compute_perplexity)
-	.def("compute_log_likelihood_data", &PyCSTM::compute_log_likelihood_data)
-	.def("debug_num_updates_word", &PyCSTM::debug_num_updates_word)
-	.def("debug_num_updates_doc", &PyCSTM::debug_num_updates_doc)
-	.def("load", &PyCSTM::load)
-	.def("save", &PyCSTM::save);
+	python::class_<PyTrainer>("trainer")
+	.def("add_document", &PyTrainer::add_document)
+	.def("compile", &PyTrainer::compile)
+	.def("reset_statistics", &PyTrainer::reset_statistics)
+	.def("get_vocabulary_size", &PyTrainer::get_vocabulary_size)
+	.def("get_num_documents", &PyTrainer::get_num_documents)
+	.def("get_sum_word_frequency", &PyTrainer::get_sum_word_frequency)
+	.def("get_ndim_d", &PyTrainer::get_ndim_d)
+	.def("get_high_freq_words", &PyTrainer::get_high_freq_words)
+	.def("get_mh_acceptance_rate_for_word_vector", &PyTrainer::get_mh_acceptance_rate_for_word_vector)
+	.def("get_mh_acceptance_rate_for_doc_vector", &PyTrainer::get_mh_acceptance_rate_for_doc_vector)
+	.def("get_mh_acceptance_rate_for_alpha0", &PyTrainer::get_mh_acceptance_rate_for_alpha0)
+	.def("get_num_doc_vec_sampled", &PyTrainer::get_num_doc_vec_sampled)
+	.def("get_num_word_vec_sampled", &PyTrainer::get_num_word_vec_sampled)
+	.def("get_alpha0", &PyTrainer::get_alpha0)
+	.def("set_ndim_d", &PyTrainer::set_ndim_d)
+	.def("set_alpha0", &PyTrainer::set_alpha0)
+	.def("set_sigma_u", &PyTrainer::set_sigma_u)
+	.def("set_sigma_phi", &PyTrainer::set_sigma_phi)
+	.def("set_sigma_alpha0", &PyTrainer::set_sigma_alpha0)
+	.def("set_gamma_alpha_a", &PyTrainer::set_gamma_alpha_a)
+	.def("set_gamma_alpha_b", &PyTrainer::set_gamma_alpha_b)
+	.def("set_num_threads", &PyTrainer::set_num_threads)
+	.def("perform_mh_sampling_word", &PyTrainer::perform_mh_sampling_word)
+	.def("perform_mh_sampling_document", &PyTrainer::perform_mh_sampling_document)
+	.def("perform_mh_sampling_alpha0", &PyTrainer::perform_mh_sampling_alpha0)
+	.def("compute_perplexity", &PyTrainer::compute_perplexity)
+	.def("compute_log_likelihood_data", &PyTrainer::compute_log_likelihood_data)
+	.def("_debug_num_updates_word", &PyTrainer::_debug_num_updates_word)
+	.def("_debug_num_updates_doc", &PyTrainer::_debug_num_updates_doc)
+	.def("load", &PyTrainer::load)
+	.def("save", &PyTrainer::save);
 }
