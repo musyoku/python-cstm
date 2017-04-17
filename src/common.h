@@ -1,5 +1,5 @@
 #pragma once
-#include "src/fmath.h"
+#include "fmath.h"
 
 #define NDIM_D 			2		// 文書・単語ベクトルの次元数
 #define SIGMA_U 		0.01	// 文書ベクトルのランダムウォーク幅

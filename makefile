@@ -1,12 +1,15 @@
-CC = g++
-CFLAGS = -I`python -c 'from distutils.sysconfig import *; print get_python_inc()'` -std=c++11 -L/usr/local/lib -lboost_serialization -lboost_python -lpython2.7 -O3 -fomit-frame-pointer -fno-operator-names -msse2 -mfpmath=sse -march=native
-CFLAGS_SO = -I`python -c 'from distutils.sysconfig import *; print get_python_inc()'` -shared -fPIC -std=c++11 -L/usr/local/lib -lboost_serialization -lboost_python -lpython2.7 -O3 -fomit-frame-pointer -fno-operator-names -msse2 -mfpmath=sse -march=native
+CC = icpc
+INCLUDE = -I`python -c 'from distutils.sysconfig import *; print get_python_inc()'`
+BOOST = -lboost_python -lpython2.7 -lboost_serialization
+FMATH =  -fomit-frame-pointer -fno-operator-names -msse2 -mfpmath=sse -march=native
+CFLAGS = -std=c++11 -L/usr/local/lib -O3
+CFLAGS_SO = -shared -fPIC -std=c++11 -L/usr/local/lib -O3 
 
 install: ## Python用ライブラリをビルドします.
-	$(CC) model.cpp -o model.so $(CFLAGS_SO)
+	$(CC) model.cpp -o model.so $(INCLUDE) $(BOOST) $(FMATH) $(CFLAGS_SO)
 
 test: ## LLDB用.
-	$(CC) test.cpp $(CFLAGS)
+	$(CC) test.cpp $(INCLUDE) $(BOOST) $(FMATH) $(CFLAGS)
 
 .PHONY: help
 help:

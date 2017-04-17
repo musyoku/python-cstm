@@ -649,7 +649,7 @@ public:
 		std::memcpy(_vec_copy, original_vec, _cstm->_ndim_d * sizeof(double));
 		return _vec_copy;
 	}
-	python::list convert_vector_to_list(double* vector){
+	python::list _convert_vector_to_list(double* vector){
 		python::list vector_list;
 		for(int i = 0;i < _cstm->_ndim_d;i++){
 			vector_list.append(vector[i]);
@@ -661,7 +661,7 @@ public:
 		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
 			python::list vector_list;
 			double* vector = get_word_vector(word_id);
-			vector_array.append(convert_vector_to_list(vector));
+			vector_array.append(_convert_vector_to_list(vector));
 		}
 		return vector_array;
 	}
@@ -698,7 +698,7 @@ public:
 			tuple.append(word_id);
 			tuple.append(word);
 			tuple.append(count);
-			tuple.append(convert_vector_to_list(vector));
+			tuple.append(_convert_vector_to_list(vector));
 			result.append(tuple);
 			itr++;
 		}
@@ -715,7 +715,6 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_num_documents", &PyTrainer::get_num_documents)
 	.def("get_sum_word_frequency", &PyTrainer::get_sum_word_frequency)
 	.def("get_ndim_d", &PyTrainer::get_ndim_d)
-	.def("get_high_freq_words", &PyTrainer::get_high_freq_words)
 	.def("get_mh_acceptance_rate_for_word_vector", &PyTrainer::get_mh_acceptance_rate_for_word_vector)
 	.def("get_mh_acceptance_rate_for_doc_vector", &PyTrainer::get_mh_acceptance_rate_for_doc_vector)
 	.def("get_mh_acceptance_rate_for_alpha0", &PyTrainer::get_mh_acceptance_rate_for_alpha0)
@@ -737,6 +736,10 @@ BOOST_PYTHON_MODULE(model){
 	.def("compute_log_likelihood_data", &PyTrainer::compute_log_likelihood_data)
 	.def("_debug_num_updates_word", &PyTrainer::_debug_num_updates_word)
 	.def("_debug_num_updates_doc", &PyTrainer::_debug_num_updates_doc)
-	.def("load", &PyTrainer::load)
 	.def("save", &PyTrainer::save);
+
+	python::class_<PyCSTM>("cstm", python::init<string>())
+	.def("get_word_vectors", &PyCSTM::get_word_vectors)
+	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
+	.def("load", &PyCSTM::load);
 }

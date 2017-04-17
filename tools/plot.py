@@ -77,7 +77,7 @@ def plot_f(word_vector_pair, doc_id, doc_vector, output_dir=None, filename="f"):
 		pylab.ylim(-5, 5)
 		pylab.savefig("{}/{}_{}.png".format(output_dir, filename, doc_id))
 
-def main():
+def main(args):
 	mkdir(args.output_dir)
 	assert os.path.exists(args.model_dir)
 	cstm = model.cstm()
@@ -135,4 +135,9 @@ def main():
 
 
 if __name__ == "__main__":
-	main()
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-m", "--model-dir", type=str, default="out")
+	parser.add_argument("-o", "--output-dir", type=str, default="out/plot")
+	parser.add_argument("-doc", "--doc-id", type=int, default=0, help="文書ID")
+	args = parser.parse_args()
+	main(args)
