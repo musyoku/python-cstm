@@ -14,8 +14,8 @@ class stdout:
 # グループが存在しない場合は空にする
 # 各グループ名から始まるテキストファイルは同じグループであるとみなす
 # ただし、グループ関係はグラフプロット時の色分けにのみ使い、学習には用いない
-# 1グループ1文書にする場合は空でよい
 # 以下の例では geforce_00.txt geforce_01.txt などが同一グループになる
+# 空にするとargs.document_dir内のファイルを全て読み込む
 groups = [
 	"geforce",
 	"gochiusa",
@@ -47,6 +47,9 @@ def add_documents(cstm):
 				sys.stdout.write("\rLoading {}".format(filename))
 				sys.stdout.flush()
 				cstm.add_document("{}/{}".format(args.document_dir, filename));
+		sys.stdout.write(stdout.CLEAR)
+		sys.stdout.write("\r")
+		sys.stdout.flush()
 		return
 
 	# 文書にグループが存在する場合

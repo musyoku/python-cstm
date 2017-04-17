@@ -260,10 +260,10 @@ public:
 		return itr != set.end();
 	}
 	int get_num_documents(){
-		return _cstm->_num_documents;
+		return _dataset.size();
 	}
 	int get_vocabulary_size(){
-		return _cstm->_vocabulary_size;
+		return _word_frequency.size();
 	}
 	int get_ndim_d(){
 		return _cstm->_ndim_d;
@@ -740,6 +740,12 @@ BOOST_PYTHON_MODULE(model){
 
 	python::class_<PyCSTM>("cstm", python::init<string>())
 	.def("get_word_vectors", &PyCSTM::get_word_vectors)
+	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
 	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)
+	.def("get_ndim_d", &PyCSTM::get_ndim_d)
+	.def("get_num_documents", &PyCSTM::get_num_documents)
+	.def("get_vocabulary_size", &PyCSTM::get_vocabulary_size)
+	.def("get_sum_word_frequency", &PyCSTM::get_sum_word_frequency)
+	.def("get_alpha0", &PyCSTM::get_alpha0)
 	.def("load", &PyCSTM::load);
 }
