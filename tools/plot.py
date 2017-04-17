@@ -1,8 +1,9 @@
 # coding: utf-8
 import argparse, sys, os, pylab
-import model
 import seaborn as sns
 import numpy as np
+sys.path.append(os.path.split(os.getcwd())[0])
+import model
 import dataset
 from args import args
 from train import mkdir
@@ -66,7 +67,7 @@ def plot_words(words, ndim_vector, output_dir=None, filename="scatter"):
 def plot_f(word_vector_pair, doc_id, doc_vector, output_dir=None, filename="f"):
 	with sns.axes_style("white", {"font.family": [fontfamily]}):
 		fig = pylab.gcf()
-		fig.set_size_inches(40.0, 20.0)
+		fig.set_size_inches(40.0, 40.0)
 		pylab.clf()
 		for pair in word_vector_pair:
 			word, word_vector = pair
@@ -80,8 +81,7 @@ def plot_f(word_vector_pair, doc_id, doc_vector, output_dir=None, filename="f"):
 def main(args):
 	mkdir(args.output_dir)
 	assert os.path.exists(args.model_dir)
-	cstm = model.cstm()
-	assert cstm.load(args.model_dir) == True
+	cstm = model.cstm(args.model_dir + "/cstm.model")
 	ndim = cstm.get_ndim_d()
 	# ベクトルを取得
 	word_vectors = np.asarray(cstm.get_word_vectors(), dtype=np.float32)
