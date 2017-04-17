@@ -32,10 +32,12 @@ categories = [
 categories = []
 
 def path_to_documents_for_category():
-	return args.model_dir + "/documents_for_category.pickle"
+	model_dir = "/".join(args.model_filename.split("/")[:-1])
+	return model_dir + "/documents_for_category.pickle"
 
 def path_to_category_for_document():
-	return args.model_dir +  "/category_for_document.pickle"
+	model_dir = "/".join(args.model_filename.split("/")[:-1])
+	return model_dir +  "/category_for_document.pickle"
 
 def add_documents(cstm):
 	# 存在するファイルの読み込み

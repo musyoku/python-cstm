@@ -84,11 +84,16 @@ def main(args):
 	words = cstm.get_words()
 	for meta in words:
 		word = meta[1]
+		count = meta[2]
+		if count < args.min_occurence:
+			continue
 		word_vector = np.asarray(meta[3], dtype=np.float32)
 		f = np.inner(word_vector, doc_vector)
 		dic[word] = f
 	dic = sorted(dic.items(), key=lambda x: -x[1])
+
 	max_count = min(args.max_num_word, len(dic))
+	dic = dict(dic[:max_count])
 
 	wordcloud = WordCloud(
 		background_color="white",
@@ -96,7 +101,7 @@ def main(args):
 		width=args.width, 
 		height=args.height, 
 		max_words=max_count, 
-		max_font_size=args.max_font_size).generate_from_frequencies(dict(dic[:max_count]))
+		max_font_size=args.max_font_size).generate_from_frequencies(dic)
 	color_funcs = [None, color_func_1, color_func_2, color_func_3, color_func_4]
 	color_func = color_funcs[args.color]
 	wordcloud.recolor(color_func=color_func)
@@ -110,8 +115,9 @@ if __name__ == "__main__":
 	parser.add_argument("--width", type=int, default=800, help="クラウドの幅.")
 	parser.add_argument("--height", type=int, default=450, help="クラウドの高さ.")
 	parser.add_argument("--color", type=int, default=1, help="クラウドのcolor_func番号.")
-	parser.add_argument("-fsize", "--max-font-size", type=int, default=150, help="最大フォントサイズ.")
-	parser.add_argument("-max", "--max-num-word", type=int, default=200, help="fの値が高い順にいくつの単語をプロットするか.")
+	parser.add_argument("-fsize", "--max-font-size", type=int, default=100, help="最大フォントサイズ.")
+	parser.add_argument("-max", "--max-num-word", type=int, default=500, help="fの値が高い順にいくつの単語をプロットするか.")
 	parser.add_argument("-font", "--font-path", type=str, default=None, help="フォントのパス.")
+	parser.add_argument("-min", "--min-occurence", type=int, default=100, help="これ以下の出現回数の単語はプロットしない.")
 	args = parser.parse_args()
 	main(args)

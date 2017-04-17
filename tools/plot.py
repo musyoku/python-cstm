@@ -60,7 +60,7 @@ def plot_words(words, ndim_vector, output_dir=None, filename="scatter"):
 			pylab.clf()
 			for meta in words:
 				word_id, word, count, vector = meta
-				assert vector.size == ndim
+				assert len(vector) == ndim_vector
 				pylab.text(vector[i], vector[i + 1], word, fontsize=5)
 			pylab.xlim(-4, 4)
 			pylab.ylim(-4, 4)
@@ -82,8 +82,8 @@ def plot_f(word_vector_pair, doc_id, doc_vector, output_dir=None, filename="f"):
 
 def main(args):
 	mkdir(args.output_dir)
-	assert os.path.exists(args.model_dir)
-	cstm = model.cstm(args.model_dir)
+	assert os.path.exists(args.model_filename)
+	cstm = model.cstm(args.model_filename)
 	ndim = cstm.get_ndim_d()
 	# ベクトルを取得
 	word_vectors = np.asarray(cstm.get_word_vectors(), dtype=np.float32)
