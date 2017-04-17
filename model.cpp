@@ -656,6 +656,7 @@ public:
 		}
 		return vector_list;
 	}
+	// 単語のベクトルだけ取得
 	python::list get_word_vectors(){
 		python::list vector_array;
 		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
@@ -665,6 +666,7 @@ public:
 		}
 		return vector_array;
 	}
+	// 文書のベクトルだけ取得
 	python::list get_doc_vectors(){
 		python::list vector_array;
 		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
@@ -704,6 +706,28 @@ public:
 		}
 		return result;
 	}
+	// 単語とそのベクトルを取得
+	python::list get_words(){
+		python::list result;
+		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
+			int count = _word_frequency[word_id];
+			wstring word = _vocab->word_id_to_string(word_id);
+			double* vector = get_word_vector(word_id);
+			unordered_set<int> &doc_ids = _docs_containing_word[word_id];
+			python::list tuple;
+			tuple.append(word_id);	// 単語ID
+			tuple.append(word);		// 単語
+			tuple.append(count);	// 出現頻度
+			tuple.append(_convert_vector_to_list(vector));	// 単語ベクトル
+			python::list docs;
+			for(const int doc_id: doc_ids){
+				docs.append(doc_id);
+			}
+			tuple.append(docs);		// この単語が出現した文書のID
+			result.append(tuple);
+		}
+		return result;
+	}
 };
 
 BOOST_PYTHON_MODULE(model){
@@ -739,6 +763,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("save", &PyTrainer::save);
 
 	python::class_<PyCSTM>("cstm", python::init<string>())
+	.def("get_words", &PyCSTM::get_words)
 	.def("get_word_vectors", &PyCSTM::get_word_vectors)
 	.def("get_doc_vectors", &PyCSTM::get_doc_vectors)
 	.def("get_high_freq_words", &PyCSTM::get_high_freq_words)

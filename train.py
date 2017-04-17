@@ -18,8 +18,8 @@ def mkdir(target):
 		pass
 
 def main():
-	mkdir(args.model_dir)
-	assert os.path.exists(args.model_dir)
+	model_dir = "/".join(args.model_filename.split("/")[:-1])
+	mkdir(model_dir)
 	assert os.path.exists(args.document_dir)
 	trainer = model.trainer()
 	trainer.set_ndim_d(args.ndim_d)
@@ -66,7 +66,7 @@ def main():
 			# trainer._debug_num_updates_word()
 			# trainer._debug_num_updates_doc()
 			
-			trainer.save(args.model_dir + "/cstm.model")
+			trainer.save(args.model_filename)
 			trainer.reset_statistics()	# 統計をリセット. 結果表示用の統計なので学習とは無関係
 			total_time += elapsed_time
 			start_time = time.time()

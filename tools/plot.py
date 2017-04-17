@@ -46,6 +46,7 @@ def plot_scatter_category(data_for_category, ndim, output_dir=None, filename="sc
 			fig.set_size_inches(16.0, 16.0)
 			pylab.clf()
 			for category, data in enumerate(data_for_category):
+				assert data.shape[1] == ndim
 				pylab.scatter(data[:, i], data[:, i + 1], s=30, marker=markers[category % len(markers)], edgecolors="none", color=palette[category])
 			# pylab.xlim(-4, 4)
 			# pylab.ylim(-4, 4)
@@ -59,6 +60,7 @@ def plot_words(words, ndim_vector, output_dir=None, filename="scatter"):
 			pylab.clf()
 			for meta in words:
 				word_id, word, count, vector = meta
+				assert vector.size == ndim
 				pylab.text(vector[i], vector[i + 1], word, fontsize=5)
 			pylab.xlim(-4, 4)
 			pylab.ylim(-4, 4)
@@ -81,7 +83,7 @@ def plot_f(word_vector_pair, doc_id, doc_vector, output_dir=None, filename="f"):
 def main(args):
 	mkdir(args.output_dir)
 	assert os.path.exists(args.model_dir)
-	cstm = model.cstm(args.model_dir + "/cstm.model")
+	cstm = model.cstm(args.model_dir)
 	ndim = cstm.get_ndim_d()
 	# ベクトルを取得
 	word_vectors = np.asarray(cstm.get_word_vectors(), dtype=np.float32)
@@ -108,11 +110,11 @@ def main(args):
 		plot_kde(doc_vectors[:,i:], args.output_dir, filename="doc_kde_{}-{}".format(i, i + 1))
 		plot_scatter(doc_vectors[:,i:], args.output_dir, filename="doc_scatter_{}-{}".format(i, i + 1))
 
-	# 文書にグループがある場合
-	documents_for_group, group_for_document = dataset.load_groups()
-	if len(documents_for_group) > 0:
+	# 文書にカテゴリがある場合
+	documents_for_category, category_for_document = dataset.load_categories()
+	if len(documents_for_category) > 0:
 		doc_vectors_for_category = []
-		for i, (group_name, doc_ids) in enumerate(documents_for_group.items()):
+		for i, (category_name, doc_ids) in enumerate(documents_for_category.items()):
 			doc_vectors_for_category.append([])
 			for doc_id in doc_ids:
 				doc_vectors_for_category[i].append(doc_vectors[doc_id])
@@ -136,7 +138,7 @@ def main(args):
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-m", "--model-dir", type=str, default="out")
+	parser.add_argument("-m", "--model-filename", type=str, default="out/cstm.model")
 	parser.add_argument("-o", "--output-dir", type=str, default="out/plot")
 	parser.add_argument("-doc", "--doc-id", type=int, default=0, help="文書ID")
 	args = parser.parse_args()

@@ -1,6 +1,6 @@
 import argparse
 parser = argparse.ArgumentParser()
-parser.add_argument("-m", "--model-dir", type=str, default="out")
+parser.add_argument("-m", "--model-filename", type=str, default="out/cstm.model")
 parser.add_argument("-o", "--output-dir", type=str, default="out/plot")
 parser.add_argument("-d", "--document-dir", type=str, default="documents")
 parser.add_argument("-dim", "--ndim-d", type=int, default=20)
