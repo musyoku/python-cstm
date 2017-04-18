@@ -28,14 +28,17 @@ def main():
 	trainer.set_sigma_alpha0(0.2)
 	trainer.set_gamma_alpha_a(5)
 	trainer.set_gamma_alpha_b(500)
-	trainer.set_num_threads(args.num_thread)		# 文書ベクトルの更新に使うスレッド数
+	trainer.set_num_threads(args.num_thread)			# 文書ベクトルの更新に使うスレッド数
+	trainer.set_ignore_word_count(args.ignore_count)	# 低頻度後を学習しない
 
 	# 読み込み
 	dataset.add_documents(trainer)
+	trainer.compile()
 
-	num_vocab = trainer.get_vocabulary_size()
+	vocab_size = trainer.get_vocabulary_size()
+	ignored_vocab_size = trainer.get_ignored_vocabulary_size()
 	num_docs = trainer.get_num_documents()
-	print num_vocab, "vocabularies,", num_docs, "docs,", trainer.get_sum_word_frequency(), "words"
+	print "{} vocabularies ({} ignored), {} docs, {} words".format(vocab_size, ignored_vocab_size, num_docs, trainer.get_sum_word_frequency())
 	start_time = time.time()
 	total_time = 0
 	itr = 0
@@ -61,8 +64,6 @@ def main():
 			print "		document:", trainer.get_mh_acceptance_rate_for_doc_vector(), ", word:", trainer.get_mh_acceptance_rate_for_word_vector(), ", a0:", trainer.get_mh_acceptance_rate_for_alpha0()
 			print "	alpha0:", trainer.get_alpha0()
 
-			# 各文書・各単語ベクトルについて、最大更新回数と最小更新回数を表示
-			# maxとminがほぼ同じなら均等に学習できている
 			# trainer._debug_num_updates_word()
 			# trainer._debug_num_updates_doc()
 			

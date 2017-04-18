@@ -73,6 +73,7 @@ public:
 	bool _is_compiled;
 	int _ndim_d;
 	int _num_threads;
+	int _ignored_vocabulary_size;
 	std::thread* _doc_threads;
 	// 統計
 	// MH法で採択された回数
@@ -111,6 +112,7 @@ public:
 		_doc_threads = NULL;
 		_ndim_d = 0;
 		_num_threads = 1;
+		_ignored_vocabulary_size = 0;
 		reset_statistics();
 		_is_compiled = false;
 		_random_sampling_word_index = 0;
@@ -174,11 +176,6 @@ public:
 			_new_vec_copy_thread[i] = new double[_ndim_d];
 		}
 		_doc_threads = new std::thread[_num_threads];
-		// 単語のランダムサンプリング用
-		for(id word_id = 0;word_id < vocabulary_size;word_id++){
-			_random_word_ids.push_back(word_id);
-			_num_updates_word[word_id] = 0;
-		}
 		// CSTM
 		_cstm->_init_cache(_ndim_d, vocabulary_size, num_docs);
 		for(int doc_id = 0;doc_id < num_docs;doc_id++){
@@ -201,6 +198,16 @@ public:
 		assert(_sum_word_frequency.size() == _dataset.size());
 		_old_alpha_words = new double[num_docs];
 		_Zi_cache = new double[num_docs];
+		// 単語のランダムサンプリング用
+		for(id word_id = 0;word_id < vocabulary_size;word_id++){
+			_num_updates_word[word_id] = 0;
+			int count = _cstm->get_word_count(word_id);
+			if(count < _cstm->get_ignore_word_count()){
+				_ignored_vocabulary_size += 1;
+				continue;
+			}
+			_random_word_ids.push_back(word_id);
+		}
 		std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), sampler::mt);
 		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), sampler::mt);
 		_is_compiled = true;
@@ -265,6 +272,9 @@ public:
 	int get_vocabulary_size(){
 		return _word_frequency.size();
 	}
+	int get_ignored_vocabulary_size(){
+		return _ignored_vocabulary_size;
+	}
 	int get_ndim_d(){
 		return _cstm->_ndim_d;
 	}
@@ -311,6 +321,9 @@ public:
 	}
 	void set_num_threads(int num_threads){
 		_num_threads = num_threads;
+	}
+	void set_ignore_word_count(int count){
+		_cstm->set_ignore_word_count(count);
 	}
 	void set_ndim_d(int ndim_d){
 		_ndim_d = ndim_d;
@@ -366,16 +379,18 @@ public:
 			_cstm->update_Zi(doc_id);
 		}
 	}
+	// _random_word_idsには最初から低頻度後は含まれていない
 	void perform_mh_sampling_word(){
 		compile_if_needed();
 		// 更新する単語ベクトルをランダムに選択
 		// 一度に更新する個数は 語彙数/文書数
-		int limit = (int)(get_vocabulary_size() / (double)get_num_documents());
+		int limit = (int)((get_vocabulary_size() - _ignored_vocabulary_size) / (double)get_num_documents());
 		if(_random_sampling_word_index + limit >= _random_word_ids.size()){
 			std::shuffle(_random_word_ids.begin(), _random_word_ids.end(), sampler::mt);
 			_random_sampling_word_index = 0;
 		}
 		for(int i = 0;i < limit;i++){
+			assert(i + _random_sampling_word_index < _random_word_ids.size());
 			id word_id = _random_word_ids[i + _random_sampling_word_index];
 			double* old_vec = get_word_vector(word_id);
 			double* new_vec = draw_word_vector(old_vec);
@@ -736,6 +751,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("compile", &PyTrainer::compile)
 	.def("reset_statistics", &PyTrainer::reset_statistics)
 	.def("get_vocabulary_size", &PyTrainer::get_vocabulary_size)
+	.def("get_ignored_vocabulary_size", &PyTrainer::get_ignored_vocabulary_size)
 	.def("get_num_documents", &PyTrainer::get_num_documents)
 	.def("get_sum_word_frequency", &PyTrainer::get_sum_word_frequency)
 	.def("get_ndim_d", &PyTrainer::get_ndim_d)
@@ -753,6 +769,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("set_gamma_alpha_a", &PyTrainer::set_gamma_alpha_a)
 	.def("set_gamma_alpha_b", &PyTrainer::set_gamma_alpha_b)
 	.def("set_num_threads", &PyTrainer::set_num_threads)
+	.def("set_ignore_word_count", &PyTrainer::set_ignore_word_count)
 	.def("perform_mh_sampling_word", &PyTrainer::perform_mh_sampling_word)
 	.def("perform_mh_sampling_document", &PyTrainer::perform_mh_sampling_document)
 	.def("perform_mh_sampling_alpha0", &PyTrainer::perform_mh_sampling_alpha0)

@@ -19,6 +19,7 @@ namespace cstm{
 	public:
 	int** _n_k;					// 文書ごとの単語の出現頻度
 	int* _sum_n_k;				// 文書ごとの単語の出現頻度の総和
+	int* _word_count;
 	double* _Zi;
 	double* _g0;				// 単語のデフォルト確率
 	double** _word_vectors;		// 単語ベクトル
@@ -27,6 +28,7 @@ namespace cstm{
 	int _num_documents;
 	int _vocabulary_size;
 	int _sum_word_frequency;	// 全単語の出現回数の総和
+	int _ignore_word_count;
 	double _sigma_u;
 	double _sigma_phi;
 	double _sigma_alpha0;
@@ -52,6 +54,7 @@ namespace cstm{
 		_word_vectors = NULL;
 		_doc_vectors = NULL;
 		_n_k = NULL;
+		_word_count = NULL;
 		_sum_n_k = NULL;
 		_Zi = NULL;
 		_log_likelihood_first_term = NULL;
@@ -59,6 +62,7 @@ namespace cstm{
 		_vocabulary_size = 0;
 		_num_documents = 0;
 		_sum_word_frequency = 0;
+		_ignore_word_count = 0;
 		_is_initialized = false;
 		_is_compiled = false;
 		_standard_normal_distribution = normal_distribution<double>(0, 1);
@@ -96,6 +100,7 @@ namespace cstm{
 				_n_k[doc_id][word_id] = 0;
 			}
 		}
+		_word_count = new int[vocabulary_size];
 		_is_initialized = true;
 	}
 	void _delete_cache(){
@@ -118,6 +123,9 @@ namespace cstm{
 				delete[] _n_k[doc_id];
 			}
 			delete[] _n_k;
+		}
+		if(_word_count != NULL){
+			delete[] _word_count;
 		}
 		if(_tmp_vec != NULL){
 			delete[] _tmp_vec;
@@ -154,6 +162,7 @@ namespace cstm{
 			double g0 = sum_count / _sum_word_frequency;
 			assert(0 < g0 && g0 <= 1);
 			_g0[word_id] = g0;
+			_word_count[word_id] = sum_count;
 		}
 		int sum_word_frequency_check = 0;
 		for(int doc_id = 0;doc_id < _num_documents;doc_id++){
@@ -291,6 +300,10 @@ namespace cstm{
 		double sum_word_frequency = _sum_n_k[doc_id];
 		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+			int count = _word_count[word_id];
+			if(count < _ignore_word_count){
+				continue;
+			}
 			log_pw += _compute_second_term_of_log_probability_document(doc_id, word_id);
 		}
 		return log_pw;
@@ -305,6 +318,10 @@ namespace cstm{
 		double sum_word_frequency = _sum_n_k[doc_id];
 		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(const id word_id: word_ids){
+			int count = _word_count[word_id];
+			if(count < _ignore_word_count){
+				continue;
+			}
 			log_pw += _compute_second_term_of_log_probability_document(doc_id, word_id);
 		}
 		return log_pw;
@@ -372,6 +389,13 @@ namespace cstm{
 		int* count = _n_k[doc_id];
 		return count[word_id];
 	}
+	int get_word_count(id word_id){
+		assert(word_id < _vocabulary_size);
+		return _word_count[word_id];
+	}
+	int get_ignore_word_count(){
+		return _ignore_word_count;
+	}
 	double get_Zi(int doc_id){
 		assert(doc_id < _num_documents);
 		return _Zi[doc_id];
@@ -402,6 +426,9 @@ namespace cstm{
 	}
 	void set_size_vocabulary(int vocabulary_size){
 		_vocabulary_size = vocabulary_size;
+	}
+	void set_ignore_word_count(int count){
+		_ignore_word_count = count;
 	}
 	void set_word_vector(id word_id, double* source){
 		assert(word_id < _vocabulary_size);
