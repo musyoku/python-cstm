@@ -254,8 +254,8 @@ public:
 				word_ids.push_back(word_id);
 				unordered_set<int> &docs = _docs_containing_word[word_id];
 				docs.insert(doc_id);
-				unordered_set<id> &word_ids = _word_ids_in_doc[doc_id];
-				word_ids.insert(word_id);
+				unordered_set<id> &word_set = _word_ids_in_doc[doc_id];
+				word_set.insert(word_id);
 				_word_frequency[word_id] += 1;
 			}
 			dataset.push_back(word_ids);

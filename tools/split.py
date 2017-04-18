@@ -10,7 +10,7 @@ def split(filename, args):
 		for s in f:
 			sentences.append(s)
 	num_per_file = len(sentences) // args.split
-	sentences = [sentences[i:i + num_per_file] for i in range(args.split)]
+	sentences = [sentences[i * num_per_file:(i + 1) * num_per_file] for i in range(args.split)]
 	for i, dataset in enumerate(sentences):
 		with codecs.open("{}/{}_{}.txt".format(args.output_dir, filename_without_ext, i), "w", "utf-8") as f:
 			for sentence in dataset:
@@ -32,5 +32,5 @@ if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-i", "--input-dir", type=str, default=None)
 	parser.add_argument("-o", "--output-dir", type=str, default=None)
-	parser.add_argument("-s", "--split", type=int, default=100)
+	parser.add_argument("-s", "--split", type=int, default=10)
 	main(parser.parse_args())

@@ -29,7 +29,7 @@ categories = [
 ]
 # 空にするとargs.document_dir内のファイルを全て読み込む
 # 通常は空にしておく
-categories = []
+# categories = []
 
 def path_to_documents_for_category():
 	model_dir = "/".join(args.model_filename.split("/")[:-1])
