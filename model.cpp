@@ -202,7 +202,7 @@ public:
 		for(id word_id = 0;word_id < vocabulary_size;word_id++){
 			_num_updates_word[word_id] = 0;
 			int count = _cstm->get_word_count(word_id);
-			if(count < _cstm->get_ignore_word_count()){
+			if(count <= _cstm->get_ignore_word_count()){
 				_ignored_vocabulary_size += 1;
 				continue;
 			}

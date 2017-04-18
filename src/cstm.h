@@ -301,7 +301,7 @@ namespace cstm{
 		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(id word_id = 0;word_id < _vocabulary_size;word_id++){
 			int count = _word_count[word_id];
-			if(count < _ignore_word_count){
+			if(count <= _ignore_word_count){
 				continue;
 			}
 			log_pw += _compute_second_term_of_log_probability_document(doc_id, word_id);
@@ -319,7 +319,7 @@ namespace cstm{
 		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(const id word_id: word_ids){
 			int count = _word_count[word_id];
-			if(count < _ignore_word_count){
+			if(count <= _ignore_word_count){
 				continue;
 			}
 			log_pw += _compute_second_term_of_log_probability_document(doc_id, word_id);

@@ -29,15 +29,13 @@ categories = [
 ]
 # 空にするとargs.document_dir内のファイルを全て読み込む
 # 通常は空にしておく
-# categories = []
+categories = []
 
 def path_to_documents_for_category():
-	model_dir = "/".join(args.model_filename.split("/")[:-1])
-	return model_dir + "/documents_for_category.pickle"
+	return args.model_dir + "/documents_for_category.pickle"
 
 def path_to_category_for_document():
-	model_dir = "/".join(args.model_filename.split("/")[:-1])
-	return model_dir +  "/category_for_document.pickle"
+	return args.model_dir +  "/category_for_document.pickle"
 
 def add_documents(cstm):
 	# 存在するファイルの読み込み

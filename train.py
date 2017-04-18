@@ -18,8 +18,7 @@ def mkdir(target):
 		pass
 
 def main():
-	model_dir = "/".join(args.model_filename.split("/")[:-1])
-	mkdir(model_dir)
+	mkdir(args.model_dir)
 	assert os.path.exists(args.document_dir)
 	trainer = model.trainer()
 	trainer.set_ndim_d(args.ndim_d)
@@ -29,11 +28,11 @@ def main():
 	trainer.set_gamma_alpha_a(5)
 	trainer.set_gamma_alpha_b(500)
 	trainer.set_num_threads(args.num_thread)			# 文書ベクトルの更新に使うスレッド数
-	trainer.set_ignore_word_count(args.ignore_count)	# 低頻度後を学習しない
+	trainer.set_ignore_word_count(args.ignore_count)	# 低頻度後を学習しない場合
 
 	# 読み込み
 	dataset.add_documents(trainer)
-	trainer.compile()
+	trainer.compile()	# 必ず呼ぶ
 
 	vocab_size = trainer.get_vocabulary_size()
 	ignored_vocab_size = trainer.get_ignored_vocabulary_size()
@@ -57,7 +56,8 @@ def main():
 			sys.stdout.flush()
 		if itr % 10000 == 0:
 			elapsed_time = time.time() - start_time
-			print stdout.CLEAR + "\rEpoch", epoch
+			print stdout.CLEAR
+			print "\rEpoch", epoch
 			print "	", trainer.compute_perplexity(), "ppl -", trainer.compute_log_likelihood_data(), "log likelihood -",  int((trainer.get_num_word_vec_sampled() + trainer.get_num_doc_vec_sampled())/ elapsed_time), "updates/sec", "-", int(elapsed_time), "sec", "-", int(total_time / 60.0), "min total"
 			# 実際に受理・棄却された回数の統計を取ってあるので表示
 			print "	MH acceptance:"
@@ -67,8 +67,8 @@ def main():
 			# trainer._debug_num_updates_word()
 			# trainer._debug_num_updates_doc()
 			
-			trainer.save(args.model_filename)
-			trainer.reset_statistics()	# 統計をリセット. 結果表示用の統計なので学習とは無関係
+			trainer.save(args.model_dir + "/cstm.model")
+			trainer.reset_statistics()	# MH法などの統計をリセット. 結果表示用の統計なので学習とは無関係
 			total_time += elapsed_time
 			start_time = time.time()
 			itr = 0
