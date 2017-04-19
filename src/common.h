@@ -14,12 +14,12 @@ namespace cstm{
 		// return fmath::expd(x);	// intelのコンパイラがない場合はこっちを使うと若干早くなるかもしれない
 		return std::exp(x);
 	}
-	double dot(double* a, double* b, int length){
-		double dot = 0;
+	double inner(double* a, double* b, int length){
+		double inner = 0;
 		for(int i = 0;i < length;i++){
-			dot += a[i] * b[i];
+			inner += a[i] * b[i];
 		}
-		return dot;
+		return inner;
 	}
 	void dump_vec(double* vec, int len){
 		std::cout << "[";

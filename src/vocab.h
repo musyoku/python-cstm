@@ -27,6 +27,12 @@ namespace cstm{
 			}
 			return itr->second;
 		}
+		id get_word_id(wstring &str){
+			id hash = hash_string(str);
+			auto itr = _hash_to_id.find(hash);
+			assert(itr != _hash_to_id.end());
+			return itr->second;
+		}
 		id hash_string(wstring &str){
 			return (id)_hash_func(str);
 		}
@@ -47,7 +53,7 @@ namespace cstm{
 		int num_words(){
 			return _string_by_word_id.size();
 		}
-	template <class Archive>
+		template <class Archive>
 		void serialize(Archive& archive, unsigned int version)
 		{
 			archive & _string_by_word_id;

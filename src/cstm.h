@@ -255,7 +255,7 @@ namespace cstm{
 		assert(word_vec != NULL);
 		assert(doc_vec != NULL);
 		assert(g0 > 0);
-		double f = cstm::dot(word_vec, doc_vec, _ndim_d);
+		double f = cstm::inner(word_vec, doc_vec, _ndim_d);
 		double alpha = _alpha0 * g0 * cstm::exp(f);
 		assert(alpha > 0);
 		return alpha;

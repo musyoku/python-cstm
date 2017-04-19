@@ -17,8 +17,9 @@
 using namespace boost;
 using namespace cstm;
 
-struct multiset_value_comparator {
-	bool operator()(const pair<id, int> &a, const pair<id, int> &b) {
+template<typename T>
+struct multiset_comparator {
+	bool operator()(const pair<id, T> &a, const pair<id, T> &b) {
 		return a.second > b.second;
 	}   
 };
@@ -724,15 +725,15 @@ public:
 	}
 	// 出現頻度が高い単語とベクトルのペアを返す
 	python::list get_high_freq_words(size_t size = 100){
-		python::list result;
 		std::pair<id, int> pair;
-		multiset<std::pair<id, int>, multiset_value_comparator> ranking;
+		multiset<std::pair<id, int>, multiset_comparator<int>> ranking;
 		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
 			int count = _word_frequency[word_id];
 			pair.first = word_id;
 			pair.second = count;
 			ranking.insert(pair);
 		}
+		python::list result;
 		auto itr = ranking.begin();
 		for(int n = 0;n < std::min(size, ranking.size());n++){
 			python::list tuple;
@@ -777,6 +778,38 @@ public:
 		for(auto doc: _doc_filename_to_id){
 			result.append(doc.first);
 		}
+		return result;
+	}
+	// 与えられた単語との類似度が高い単語を返す
+	python::list get_similar_words(wstring target, size_t size = 10){
+		id target_id = _vocab->get_word_id(target);
+		int ndim_d = _cstm->_ndim_d;
+		double* target_vec = new double[ndim_d];
+		std::pair<id, double> pair;
+		multiset<std::pair<id, double>, multiset_comparator<double>> ranking;
+		std::memcpy(target_vec, get_word_vector(target_id), ndim_d * sizeof(double));
+		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
+			double* vec = get_word_vector(word_id);
+			double f = cstm::inner(vec, target_vec, ndim_d);
+			pair.first = word_id;
+			pair.second = f;
+			ranking.insert(pair);
+		}
+		python::list result;
+		auto itr = ranking.begin();
+		for(int n = 0;n < std::min(size, ranking.size());n++){
+			python::list tuple;
+			id word_id = itr->first;
+			wstring word = _vocab->word_id_to_string(word_id);
+			double* vector = get_word_vector(word_id);
+			tuple.append(word_id);
+			tuple.append(word);
+			tuple.append(f);
+			tuple.append(_convert_vector_to_list(vector));
+			result.append(tuple);
+			itr++;
+		}
+		delete[] target_vec;
 		return result;
 	}
 };
