@@ -1,11 +1,10 @@
 # coding: utf-8
-import argparse, sys, os, pylab, random
+import argparse, sys, os, pylab, random, argparse
 import seaborn as sns
 import numpy as np
 from wordcloud import WordCloud, ImageColorGenerator
 sys.path.append(os.path.split(os.getcwd())[0])
 import model
-import argparse
 
 def color_func_1(word, font_size, position, orientation, random_state=None, **kwargs):
     colors = (
@@ -105,7 +104,7 @@ def main(args):
 	color_funcs = [None, color_func_1, color_func_2, color_func_3, color_func_4]
 	color_func = color_funcs[args.color]
 	wordcloud.recolor(color_func=color_func)
-	wordcloud.to_file("{}/cloud.png".format(args.output_dir))
+	wordcloud.to_file("{}/cloud_f_{}.png".format(args.output_dir, args.doc_id))
 				
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
