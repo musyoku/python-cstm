@@ -1,9 +1,7 @@
 # coding: utf-8
-import argparse, sys, os, re, time
+import argparse, sys, os, re, time, argparse
 import model
 import numpy as np
-from args import args
-import dataset
 
 class stdout:
 	BOLD = "\033[1m"
@@ -17,8 +15,9 @@ def mkdir(target):
 	except:
 		pass
 
-def main():
-	mkdir(args.model_dir)
+def main(args):
+	model_dir = "/".join(args.model_filename.split("/")[:-1])
+	mkdir(model_dir)
 	assert os.path.exists(args.document_dir)
 	trainer = model.trainer()
 	trainer.set_ndim_d(args.ndim_d)
@@ -31,13 +30,26 @@ def main():
 	trainer.set_ignore_word_count(args.ignore_count)	# 低頻度後を学習しない場合
 
 	# 読み込み
-	dataset.add_documents(trainer)
-	trainer.compile()	# 必ず呼ぶ
+	filelist = os.listdir(args.document_dir)
+	filelist.sort()
+	for filename in filelist:
+		if filename.endswith(".txt"):
+			sys.stdout.write(stdout.CLEAR)
+			sys.stdout.write("\rLoading {}".format(filename))
+			sys.stdout.flush()
+			doc_id = trainer.add_document("{}/{}".format(args.document_dir, filename));
+	sys.stdout.write(stdout.CLEAR)
+	sys.stdout.write("\r")
+
+	# 全て追加し終わったら必ず呼ぶ. 必要なメモリが確保されて学習の準備ができる
+	trainer.compile()
 
 	vocab_size = trainer.get_vocabulary_size()
 	ignored_vocab_size = trainer.get_ignored_vocabulary_size()
 	num_docs = trainer.get_num_documents()
-	print "{} vocabularies ({} ignored), {} docs, {} words".format(vocab_size, ignored_vocab_size, num_docs, trainer.get_sum_word_frequency())
+	print "語彙数:	{} (除外: {})".format(vocab_size, ignored_vocab_size)
+	print "文書数:	{}".format(num_docs)
+	print "単語数:	{}".format(trainer.get_sum_word_frequency())
 	start_time = time.time()
 	total_time = 0
 	itr = 0
@@ -54,7 +66,8 @@ def main():
 		if itr % 100 == 0:
 			sys.stdout.write("\riteration {} / {}".format(itr, 10000))
 			sys.stdout.flush()
-		if itr % 10000 == 0:
+
+		if itr % 10000 == 0:	# 10,000イテレーションごとに結果表示
 			elapsed_time = time.time() - start_time
 			print stdout.CLEAR
 			print "\rEpoch", epoch
@@ -67,7 +80,7 @@ def main():
 			# trainer._debug_num_updates_word()
 			# trainer._debug_num_updates_doc()
 			
-			trainer.save(args.model_dir + "/cstm.model")
+			trainer.save(args.model_filename)
 			trainer.reset_statistics()	# MH法などの統計をリセット. 結果表示用の統計なので学習とは無関係
 			total_time += elapsed_time
 			start_time = time.time()
@@ -75,4 +88,12 @@ def main():
 			epoch += 1
 
 if __name__ == "__main__":
-	main()
+	parser = argparse.ArgumentParser()
+	parser.add_argument("-m", "--model-filename", type=str, default="model/cstm.model")
+	parser.add_argument("-o", "--output-dir", type=str, default="model/out")
+	parser.add_argument("-d", "--document-dir", type=str, default="documents")
+	parser.add_argument("-dim", "--ndim-d", type=int, default=20, help="ベクトルの次元数")
+	parser.add_argument("-thread", "--num-thread", type=int, default=1)
+	parser.add_argument("-ignore", "--ignore-count", type=int, default=0, help="これ以下の出現頻度の単語は学習しない")
+	args = parser.parse_args()
+	main(args)

@@ -23,6 +23,25 @@ struct multiset_value_comparator {
 	}   
 };
 
+void split_string_by(const string &str, char delim, vector<string> &elems){
+	elems.clear();
+	string item;
+	for(char ch: str){
+		if (ch == delim){
+			if (!item.empty()){
+				elems.push_back(item);
+			}
+			item.clear();
+		}
+		else{
+			item += ch;
+		}
+	}
+	if (!item.empty()){
+		elems.push_back(item);
+	}
+}
+
 void split_word_by(const wstring &str, wchar_t delim, vector<wstring> &elems){
 	elems.clear();
 	wstring item;
@@ -64,6 +83,7 @@ public:
 	vector<int> _random_doc_ids;
 	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	unordered_map<id, int> _word_frequency;
+	unordered_map<string, int> _doc_filename_to_id;
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double** _old_vec_copy_thread;
@@ -212,8 +232,8 @@ public:
 		std::shuffle(_random_doc_ids.begin(), _random_doc_ids.end(), sampler::mt);
 		_is_compiled = true;
 	}
-	int add_document(string filename){
-		wifstream ifs(filename.c_str());
+	int add_document(string filepath){
+		wifstream ifs(filepath.c_str());
 		assert(ifs.fail() == false);
 		// 文書の追加
 		int doc_id = _dataset.size();
@@ -227,17 +247,17 @@ public:
 			assert(PyErr_CheckSignals() == 0);	// ctrl+cが押されたかチェック
 			sentences.push_back(sentence);
 		}
-		vector<int> rand_indices;
-		for(int i = 0;i < sentences.size();i++){
-			rand_indices.push_back(i);
-		}
-		shuffle(rand_indices.begin(), rand_indices.end(), sampler::mt);	// データをシャッフル
-		for(int i = 0;i < rand_indices.size();i++){
-			wstring &sentence = sentences[rand_indices[i]];
+		for(wstring &sentence: sentences){
 			vector<wstring> words;
 			split_word_by(sentence, L' ', words);	// スペースで分割
 			add_sentence_to_doc(words, doc_id);
 		}
+		// ファイル名と文書IDの対応付け
+		vector<string> components;
+		split_string_by(filepath, '/', components);	// /で分割
+		assert(components.size() > 0);
+		string filename = components.back();
+		_doc_filename_to_id[filename] = doc_id;
 		return doc_id;
 	}
 	void add_sentence_to_doc(vector<wstring> &words, int doc_id){
@@ -571,6 +591,7 @@ public:
 		oarchive << _word_ids_in_doc;
 		oarchive << _docs_containing_word;
 		oarchive << _sum_word_frequency;
+		oarchive << _doc_filename_to_id;
 	}
 	// デバッグ用
 	void _debug_num_updates_word(){
@@ -612,6 +633,7 @@ public:
 	vector<int> _sum_word_frequency;	// 文書ごとの単語の出現頻度の総和
 	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	double* _vec_copy;
+	unordered_map<string, int> _doc_filename_to_id;
 	PyCSTM(string filename){
 		assert(load(filename) == true);
 		int ndim_d = get_ndim_d();
@@ -635,6 +657,7 @@ public:
 			iarchive >> _word_ids_in_doc;
 			iarchive >> _docs_containing_word;
 			iarchive >> _sum_word_frequency;
+			iarchive >> _doc_filename_to_id;
 			return true;
 		}
 		return false;
@@ -653,6 +676,11 @@ public:
 	}
 	double get_alpha0(){
 		return _cstm->_alpha0;
+	}
+	int get_doc_id_by_filename(string filename){
+		auto itr = _doc_filename_to_id.find(filename);
+		assert(itr != _doc_filename_to_id.end());
+		return itr->second;
 	}
 	double* get_word_vector(id word_id){
 		double* original_vec = _cstm->get_word_vector(word_id);
@@ -743,6 +771,14 @@ public:
 		}
 		return result;
 	}
+	// 学習済みの文書のファイル名
+	python::list get_doc_filenames(){
+		python::list result;
+		for(auto doc: _doc_filename_to_id){
+			result.append(doc.first);
+		}
+		return result;
+	}
 };
 
 BOOST_PYTHON_MODULE(model){
@@ -789,5 +825,7 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_vocabulary_size", &PyCSTM::get_vocabulary_size)
 	.def("get_sum_word_frequency", &PyCSTM::get_sum_word_frequency)
 	.def("get_alpha0", &PyCSTM::get_alpha0)
+	.def("get_doc_id_by_filename", &PyCSTM::get_doc_id_by_filename)
+	.def("get_doc_filenames", &PyCSTM::get_doc_filenames)
 	.def("load", &PyCSTM::load);
 }

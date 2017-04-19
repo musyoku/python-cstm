@@ -11,8 +11,8 @@ using id = size_t;
 
 namespace cstm{
 	double exp(double x){
-		return fmath::expd(x);
-		// return std::exp(x);
+		// return fmath::expd(x);	// intelのコンパイラがない場合はこっちを使うと若干早くなるかもしれない
+		return std::exp(x);
 	}
 	double dot(double* a, double* b, int length){
 		double dot = 0;
