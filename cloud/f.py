@@ -124,7 +124,7 @@ if __name__ == "__main__":
 	parser.add_argument("--width", type=int, default=1440, help="クラウドの幅.")
 	parser.add_argument("--height", type=int, default=1080, help="クラウドの高さ.")
 	parser.add_argument("--color", type=int, default=1, help="クラウドのcolor_func番号.")
-	parser.add_argument("-fsize", "--max-font-size", type=int, default=200, help="最大フォントサイズ.")
+	parser.add_argument("-fsize", "--max-font-size", type=int, default=150, help="最大フォントサイズ.")
 	parser.add_argument("-max", "--max-num-word", type=int, default=500, help="fの値が高い順にいくつの単語をプロットするか.")
 	parser.add_argument("-font", "--font-path", type=str, default=None, help="フォントのパス.")
 	parser.add_argument("-min", "--min-occurence", type=int, default=20, help="これ以下の出現回数の単語はプロットしない.")
