@@ -32,9 +32,7 @@ def plot_scatter_category(vectors_for_category, output_dir=None, filename="scatt
 			pylab.clf()
 			for category_id, vectors in enumerate(vectors_for_category):
 				assert vectors.shape[1] == ndim
-				pylab.scatter(vectors[:, i], vectors[:, i + 1], s=30, marker=markers[category_id % len(markers)], edgecolors="none", color=palette[category_id])
-			# pylab.xlim(-4, 4)
-			# pylab.ylim(-4, 4)
+				pylab.scatter(vectors[:, i], vectors[:, i + 1], s=60, marker=markers[category_id % len(markers)], edgecolors="none", color=palette[category_id])
 			pylab.savefig("{}/{}_{}-{}.png".format(output_dir, filename, i, i + 1))
 
 def main():
@@ -66,7 +64,6 @@ def main():
 		doc_vectors_for_category.append([])
 		for filename in doc_filenames:
 			if filename.startswith(category_name):
-				print category_name
 				doc_id = cstm.get_doc_id_by_filename(filename)
 				assert doc_id >= 0 and doc_id < len(doc_vectors)
 				doc_vectors_for_category[category_id].append(doc_vectors[doc_id])

@@ -90,7 +90,7 @@ def main(args):
 		word_vector = np.asarray(meta[3], dtype=np.float32)
 		f = np.inner(word_vector, doc_vector)
 		dic[word] = f
-	dic = sorted(dic.items(), key=lambda x: -x[1])
+	dic = sorted(dic.items(), key=lambda x: -x[1])	# sortedが昇順なのでマイナスを掛ける
 
 	max_count = min(args.max_num_word, len(dic))
 	dic = dict(dic[:max_count])
@@ -109,13 +109,13 @@ def main(args):
 				
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
-	parser.add_argument("-m", "--model-filename", type=str, default="../out/cstm.model")
-	parser.add_argument("-o", "--output-dir", type=str, default="../out/plot")
+	parser.add_argument("-m", "--model-filename", type=str, default="../model/cstm.model")
+	parser.add_argument("-o", "--output-dir", type=str, default="../out")
 	parser.add_argument("-doc", "--doc-id", type=int, default=0, help="文書ID")
 	parser.add_argument("--width", type=int, default=1440, help="クラウドの幅.")
 	parser.add_argument("--height", type=int, default=1080, help="クラウドの高さ.")
 	parser.add_argument("--color", type=int, default=1, help="クラウドのcolor_func番号.")
-	parser.add_argument("-fsize", "--max-font-size", type=int, default=300, help="最大フォントサイズ.")
+	parser.add_argument("-fsize", "--max-font-size", type=int, default=200, help="最大フォントサイズ.")
 	parser.add_argument("-max", "--max-num-word", type=int, default=500, help="fの値が高い順にいくつの単語をプロットするか.")
 	parser.add_argument("-font", "--font-path", type=str, default=None, help="フォントのパス.")
 	parser.add_argument("-min", "--min-occurence", type=int, default=20, help="これ以下の出現回数の単語はプロットしない.")
