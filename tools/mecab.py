@@ -2,6 +2,11 @@
 import argparse, codecs, sys, os, re
 import MeCab
 
+class stdout:
+	BOLD = "\033[1m"
+	END = "\033[0m"
+	CLEAR = "\033[2K"
+
 def main(args):
 	# テキストファイルの追加
 	files = []
@@ -25,6 +30,7 @@ def main(args):
 		if filepath.endswith(".txt") == False:
 			continue
 		dataset = []
+		sys.stdout.write(stdout.CLEAR)
 		sys.stdout.write("\rprocessing {}".format(filepath))
 		sys.stdout.flush()
 		with codecs.open(filepath, "r", "utf-8") as f:
