@@ -10,7 +10,7 @@ def main(args):
 	ndim_d = cstm.get_ndim_d()
 
 	# 単語情報を取得
-	words = cstm.get_similar_words(u"nvidia", 20)
+	words = cstm.get_similar_words(u"nvidia", 100)
 	for meta in words:
 		# 単語ID、単語、総出現回数、単語ベクトル、内積
 		word_id, word, count, vector, inner = meta

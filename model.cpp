@@ -782,15 +782,6 @@ public:
 	}
 	// 与えられた単語との類似度が高い単語を返す
 	python::list get_similar_words(wstring target, size_t size = 10){
-		for(const auto &elem: _vocab->_string_by_word_id){
-			if(elem.second == L"nvidia"){
-				cout << "found" << endl;				
-				cout << elem.first << endl;
-			}
-		}
-		id added_id = _vocab->add_string(target);
-		cout << added_id << endl;
-		cout << _vocab->_string_by_word_id.size() << endl;
 		id target_id = _vocab->get_word_id(target);
 		int ndim_d = _cstm->_ndim_d;
 		double* target_vec = new double[ndim_d];
@@ -812,7 +803,7 @@ public:
 			double f = itr->second;
 			wstring word = _vocab->word_id_to_string(word_id);
 			double* vector = get_word_vector(word_id);
-			int count = _cstm->get_word_count(word_id);
+			int count = _word_frequency[word_id];
 			tuple.append(word_id);
 			tuple.append(word);
 			tuple.append(count);

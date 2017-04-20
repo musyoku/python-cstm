@@ -507,6 +507,9 @@ template<class Archive>
 					archive & vec[i];
 				}
 			}
+			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+				archive & cstm._word_count[word_id];
+			}
 		}
 		if(cstm._is_compiled){
 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
@@ -554,6 +557,9 @@ template<class Archive>
 			if(cstm._log_likelihood_first_term == NULL){
 				cstm._log_likelihood_first_term = new double[cstm._num_documents];
 			}
+			if(cstm._word_count == NULL){
+				cstm._word_count = new int[cstm._vocabulary_size];
+			}
 
 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
 				archive & cstm._Zi[doc_id];
@@ -576,6 +582,9 @@ template<class Archive>
 				for(int i = 0;i < cstm._ndim_d;i++){
 					archive & vec[i];
 				}
+			}
+			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+				archive & cstm._word_count[word_id];
 			}
 		}
 		if(cstm._is_compiled){
