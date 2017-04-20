@@ -90,7 +90,6 @@ def main(args):
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()
 	parser.add_argument("-m", "--model-filename", type=str, default="model/cstm.model")
-	parser.add_argument("-o", "--output-dir", type=str, default="model/out")
 	parser.add_argument("-d", "--document-dir", type=str, default="documents")
 	parser.add_argument("-dim", "--ndim-d", type=int, default=20, help="ベクトルの次元数")
 	parser.add_argument("-thread", "--num-thread", type=int, default=1)

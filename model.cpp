@@ -782,6 +782,15 @@ public:
 	}
 	// 与えられた単語との類似度が高い単語を返す
 	python::list get_similar_words(wstring target, size_t size = 10){
+		for(const auto &elem: _vocab->_string_by_word_id){
+			if(elem.second == L"nvidia"){
+				cout << "found" << endl;				
+				cout << elem.first << endl;
+			}
+		}
+		id added_id = _vocab->add_string(target);
+		cout << added_id << endl;
+		cout << _vocab->_string_by_word_id.size() << endl;
 		id target_id = _vocab->get_word_id(target);
 		int ndim_d = _cstm->_ndim_d;
 		double* target_vec = new double[ndim_d];
@@ -800,12 +809,15 @@ public:
 		for(int n = 0;n < std::min(size, ranking.size());n++){
 			python::list tuple;
 			id word_id = itr->first;
+			double f = itr->second;
 			wstring word = _vocab->word_id_to_string(word_id);
 			double* vector = get_word_vector(word_id);
+			int count = _cstm->get_word_count(word_id);
 			tuple.append(word_id);
 			tuple.append(word);
-			tuple.append(f);
+			tuple.append(count);
 			tuple.append(_convert_vector_to_list(vector));
+			tuple.append(f);
 			result.append(tuple);
 			itr++;
 		}
@@ -860,5 +872,6 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_alpha0", &PyCSTM::get_alpha0)
 	.def("get_doc_id_by_filename", &PyCSTM::get_doc_id_by_filename)
 	.def("get_doc_filenames", &PyCSTM::get_doc_filenames)
+	.def("get_similar_words", &PyCSTM::get_similar_words)
 	.def("load", &PyCSTM::load);
 }

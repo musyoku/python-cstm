@@ -10,12 +10,12 @@ def main(args):
 	ndim_d = cstm.get_ndim_d()
 
 	# 単語情報を取得
-	words = cstm.get_words()
+	words = cstm.get_similar_words(u"nvidia", 20)
 	for meta in words:
-		# 単語ID、単語、総出現回数、単語ベクトル、この単語が含まれる文書ID
-		word_id, word, count, vector, doc_ids = meta
+		# 単語ID、単語、総出現回数、単語ベクトル、内積
+		word_id, word, count, vector, inner = meta
 		vector = np.asarray(vector, dtype=np.float32)
-		print word_id, word, count
+		print word_id, word, count, inner
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

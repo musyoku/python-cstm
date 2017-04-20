@@ -11,10 +11,10 @@ using namespace std;
 namespace cstm{
 	class Vocab{
 	private:
+	public:
 		unordered_map<id, wstring> _string_by_word_id;
 		unordered_map<id, id> _hash_to_id;
 		hash<wstring> _hash_func;
-	public:
 		Vocab(){}
 		id add_string(wstring &str){
 			id hash = hash_string(str);
@@ -58,18 +58,6 @@ namespace cstm{
 		{
 			archive & _string_by_word_id;
 			archive & _hash_to_id;
-		}
-		void save(string filename){
-			std::ofstream ofs(filename);
-			boost::archive::binary_oarchive oarchive(ofs);
-			oarchive << *this;
-		}
-		void load(string filename){
-			std::ifstream ifs(filename);
-			if(ifs.good()){
-				boost::archive::binary_iarchive iarchive(ifs);
-				iarchive >> *this;
-			}
 		}
 	};
 }
