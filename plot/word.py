@@ -19,7 +19,7 @@ if sys.platform == "darwin":
 	fontfamily = "MS Gothic"
 else:
 	fontfamily = "TakaoGothic"
-sns.set(font=[fontfamily], font_scale=1)
+sns.set(font=[fontfamily], font_scale=2)
 
 def plot_words(words, ndim_vector, output_dir=None, filename="scatter"):
 	with sns.axes_style("white", {"font.family": [fontfamily]}):
@@ -30,7 +30,7 @@ def plot_words(words, ndim_vector, output_dir=None, filename="scatter"):
 			for meta in words:
 				word_id, word, count, vector = meta
 				assert len(vector) == ndim_vector
-				pylab.text(vector[i], vector[i + 1], word, fontsize=5)
+				pylab.text(vector[i], vector[i + 1], word, fontsize=8)
 			pylab.xlim(-4, 4)
 			pylab.ylim(-4, 4)
 			pylab.savefig("{}/{}_{}-{}.png".format(output_dir, filename, i, i + 1))

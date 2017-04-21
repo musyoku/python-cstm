@@ -85,6 +85,7 @@ public:
 	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	unordered_map<id, int> _word_frequency;
 	unordered_map<string, int> _doc_filename_to_id;
+	unordered_map<int, string> _doc_id_to_filename;
 	double* _old_vec_copy;
 	double* _new_vec_copy;
 	double** _old_vec_copy_thread;
@@ -259,6 +260,7 @@ public:
 		assert(components.size() > 0);
 		string filename = components.back();
 		_doc_filename_to_id[filename] = doc_id;
+		_doc_id_to_filename[doc_id] = filename;
 		return doc_id;
 	}
 	void add_sentence_to_doc(vector<wstring> &words, int doc_id){
@@ -593,6 +595,7 @@ public:
 		oarchive << _docs_containing_word;
 		oarchive << _sum_word_frequency;
 		oarchive << _doc_filename_to_id;
+		oarchive << _doc_id_to_filename;
 	}
 	// デバッグ用
 	void _debug_num_updates_word(){
@@ -635,6 +638,7 @@ public:
 	unordered_map<id, unordered_set<int>> _docs_containing_word;	// ある単語を含んでいる文書nのリスト
 	double* _vec_copy;
 	unordered_map<string, int> _doc_filename_to_id;
+	unordered_map<int, string> _doc_id_to_filename;
 	PyCSTM(string filename){
 		assert(load(filename) == true);
 		int ndim_d = get_ndim_d();
@@ -659,6 +663,7 @@ public:
 			iarchive >> _docs_containing_word;
 			iarchive >> _sum_word_frequency;
 			iarchive >> _doc_filename_to_id;
+			iarchive >> _doc_id_to_filename;
 			return true;
 		}
 		return false;

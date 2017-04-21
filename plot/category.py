@@ -19,7 +19,7 @@ if sys.platform == "darwin":
 	fontfamily = "MS Gothic"
 else:
 	fontfamily = "TakaoGothic"
-sns.set(font=[fontfamily], font_scale=1)
+sns.set(font=[fontfamily], font_scale=2)
 
 def plot_scatter_category(vectors_for_category, output_dir=None, filename="scatter", color="blue"):
 	ndim = vectors_for_category[0].shape[1]
@@ -32,7 +32,7 @@ def plot_scatter_category(vectors_for_category, output_dir=None, filename="scatt
 			pylab.clf()
 			for category_id, vectors in enumerate(vectors_for_category):
 				assert vectors.shape[1] == ndim
-				pylab.scatter(vectors[:, i], vectors[:, i + 1], s=60, marker=markers[category_id % len(markers)], edgecolors="none", color=palette[category_id])
+				pylab.scatter(vectors[:, i], vectors[:, i + 1], s=80, marker=markers[category_id % len(markers)], edgecolors="none", color=palette[category_id])
 			pylab.savefig("{}/{}_{}-{}.png".format(output_dir, filename, i, i + 1))
 
 def main():

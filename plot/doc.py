@@ -19,7 +19,7 @@ if sys.platform == "darwin":
 	fontfamily = "MS Gothic"
 else:
 	fontfamily = "TakaoGothic"
-sns.set(font=[fontfamily], font_scale=1)
+sns.set(font=[fontfamily], font_scale=2)
 
 def plot_kde(data, output_dir=None, filename="kde", color="Greens"):
 	fig = pylab.gcf()

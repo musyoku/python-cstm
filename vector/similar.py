@@ -10,8 +10,8 @@ def find_similar_words(args):
 	ndim_d = cstm.get_ndim_d()
 
 	# 単語情報を取得
-	words = cstm.get_words_similar_to_word(u"nvidia", 100)
-	print "word_id	word	count	inner"
+	words = cstm.get_words_similar_to_word(u"apple", 20)
+	print "word_id	word		count	inner"
 	for meta in words:
 		# 単語ID、単語、総出現回数、単語ベクトル、内積
 		word_id, word, count, vector, inner = meta
@@ -30,8 +30,8 @@ def get_analogies(args):
 	queen = (king - man + woman).tolist()
 
 	# 単語情報を取得
-	words = cstm.get_words_similar_to_vector(queen, 100)
-	print "word_id	word	count	inner"
+	words = cstm.get_words_similar_to_vector(queen, 20)
+	print "word_id	word		count	inner"
 	for meta in words:
 		# 単語ID、単語、総出現回数、単語ベクトル、内積
 		word_id, word, count, vector, inner = meta
