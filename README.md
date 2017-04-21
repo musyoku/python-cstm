@@ -2,7 +2,7 @@ Under :construction:
 
 ## 準備　
 
-### 前処理
+#### 前処理
 
 mecabで形態素解析する場合は、`tools/mecab.py`を使います。
 
@@ -14,7 +14,7 @@ python mecab.py -i INPUT_DIR -o OUTPUT_DIR
 
 ネットスラングなどが多いデータの場合は[NPYLM](https://github.com/musyoku/python-npylm)による教師なし形態素解析が有効です。
 
-### ビルド
+#### ビルド
 
 ```
 make install
@@ -48,7 +48,7 @@ python train.py -d DOCUMENT_DIR -dim 20 -ignore 3
 
 `plot`にプロット用スクリプトが入っています。
 
-### 文書ベクトルの可視化
+#### 文書ベクトルの可視化
 
 ```
 python doc.py
@@ -56,7 +56,7 @@ python doc.py
 
 各次元ごとにプロットします。
 
-### 単語ベクトルの可視化
+#### 単語ベクトルの可視化
 
 ```
 python word.py
@@ -66,7 +66,7 @@ python word.py
 
 実際にプロットされるのは点ではなく単語の文字です。
 
-### fの可視化
+#### fの可視化
 
 ```
 python f.py -doc 0
@@ -84,13 +84,13 @@ python f.py -doc 0
 
 実行するにはフォントが必要です。
 
-### fに基づく可視化
+#### fに基づく可視化
 
 ```
 python f.py -font FONT_PATH
 ```
 
-### 出現頻度で可視化
+#### 出現頻度で可視化
 
 ```
 python freq.py -font FONT_PATH
@@ -100,13 +100,13 @@ python freq.py -font FONT_PATH
 
 `vector`にスクリプトが入っています。
 
-### 類似する単語を取得
+#### 類似する単語を取得
 
 ```
 python similar.py
 ```
 
-### 全ての単語のベクトルを取得
+#### 全ての単語のベクトルを取得
 
 ```
 python word.py
