@@ -80,5 +80,34 @@ python f.py -doc 0
 
 文書の特徴を可視化できます。
 
+`cloud`にプロット用スクリプトが入っています。
 
+実行するにはフォントが必要です。
 
+### fに基づく可視化
+
+```
+python f.py -font FONT_PATH
+```
+
+### 出現頻度で可視化
+
+```
+python freq.py -font FONT_PATH
+```
+
+## ベクトルの演算
+
+`vector`にスクリプトが入っています。
+
+### 類似する単語を取得
+
+```
+python similar.py
+```
+
+### 全ての単語のベクトルを取得
+
+```
+python word.py
+```
