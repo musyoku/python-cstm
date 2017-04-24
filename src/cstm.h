@@ -277,13 +277,13 @@ namespace cstm{
 		assert(word_id < _vocabulary_size);
 		double log_pw = 0;
 		double sum_word_frequency = _sum_n_k[doc_id];
-		log_pw += cstm::lgamma(Zi) - cstm::lgamma(Zi + sum_word_frequency);
+		log_pw += lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		if(n_k == 0){
 			return log_pw;
 		}
 		if(n_k > 10){
 			// n_k > 10の場合はlgammaを使ったほうが速い
-			log_pw += cstm::lgamma(alpha_k + n_k) - cstm::lgamma(alpha_k);
+			log_pw += lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		}else{
 			double tmp = 0;
 			for(int i = 0;i < n_k;i++){
@@ -298,7 +298,7 @@ namespace cstm{
 		double Zi = _Zi[doc_id];
 		assert(Zi > 0);
 		double sum_word_frequency = _sum_n_k[doc_id];
-		double log_pw = cstm::lgamma(Zi) - cstm::lgamma(Zi + sum_word_frequency);
+		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(id word_id = 0;word_id < _vocabulary_size;word_id++){
 			int count = _word_count[word_id];
 			if(count <= _ignore_word_count){
@@ -316,7 +316,7 @@ namespace cstm{
 		}
 		assert(Zi > 0);
 		double sum_word_frequency = _sum_n_k[doc_id];
-		double log_pw = cstm::lgamma(Zi) - cstm::lgamma(Zi + sum_word_frequency);
+		double log_pw = lgamma(Zi) - lgamma(Zi + sum_word_frequency);
 		for(const id word_id: word_ids){
 			int count = _word_count[word_id];
 			if(count <= _ignore_word_count){
@@ -331,7 +331,7 @@ namespace cstm{
 		int n_k = get_word_count_in_doc(word_id, doc_id);
 		if(n_k > 10){
 			// n_k > 10の場合はlgammaを使ったほうが速い
-			return cstm::lgamma(alpha_k + n_k) - cstm::lgamma(alpha_k);
+			return lgamma(alpha_k + n_k) - lgamma(alpha_k);
 		}
 		double tmp = 0;
 		for(int i = 0;i < n_k;i++){
@@ -340,7 +340,7 @@ namespace cstm{
 		return tmp;
 	}
 	double compute_log_prior_alpha0(double alpha0){
-		return _gamma_alpha_a * log(_gamma_alpha_b) - cstm::lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * log(alpha0) - _gamma_alpha_b * alpha0;
+		return _gamma_alpha_a * log(_gamma_alpha_b) - lgamma(_gamma_alpha_a) + (_gamma_alpha_a - 1) * log(alpha0) - _gamma_alpha_b * alpha0;
 	}
 	double compute_log_Pvector_doc(double* new_vec, double* old_vec){
 		return _compute_log_Pvector_given_sigma(new_vec, old_vec, _sigma_u);
