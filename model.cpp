@@ -688,6 +688,11 @@ public:
 		assert(itr != _doc_filename_to_id.end());
 		return itr->second;
 	}
+	string get_doc_filename_by_id(int doc_id){
+		auto itr = _doc_id_to_filename.find(doc_id);
+		assert(itr != _doc_id_to_filename.end());
+		return itr->second;
+	}
 	double* get_word_vector(id word_id){
 		double* original_vec = _cstm->get_word_vector(word_id);
 		std::memcpy(_vec_copy, original_vec, _cstm->_ndim_d * sizeof(double));
@@ -801,31 +806,8 @@ public:
 		std::pair<id, double> pair;
 		multiset<std::pair<id, double>, multiset_comparator<double>> ranking;
 		std::memcpy(target_vec, get_word_vector(target_id), ndim_d * sizeof(double));
-		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
-			double* vec = get_word_vector(word_id);
-			double f = cstm::inner(vec, target_vec, ndim_d);
-			pair.first = word_id;
-			pair.second = f;
-			ranking.insert(pair);
-		}
 		python::list result;
-		auto itr = ranking.begin();
-		for(int n = 0;n < std::min(size, ranking.size());n++){
-			python::list tuple;
-			id word_id = itr->first;
-			double f = itr->second;
-			wstring word = _vocab->word_id_to_string(word_id);
-			double* vector = get_word_vector(word_id);
-			int count = _word_frequency[word_id];
-			tuple.append(word_id);
-			tuple.append(word);
-			tuple.append(count);
-			tuple.append(_convert_vector_to_list(vector));
-			tuple.append(f);
-			result.append(tuple);
-			itr++;
-		}
-		delete[] target_vec;
+		_get_words_similar_to_raw_vector(target_vec, size, result);
 		return result;
 	}
 	// 与えられたベクトルとの類似度が高い単語を返す
@@ -836,16 +818,21 @@ public:
 		for(int i = 0;i < ndim_d;i++){
 			target_vec[i] = python::extract<double>(vector_list[i]);
 		}
+		python::list result;
+		_get_words_similar_to_raw_vector(target_vec, size, result);
+		return result;
+	}
+	void _get_words_similar_to_raw_vector(double* target_vec, size_t size, python::list &result){
+		int ndim_d = _cstm->_ndim_d;
 		std::pair<id, double> pair;
 		multiset<std::pair<id, double>, multiset_comparator<double>> ranking;
 		for(id word_id = 0;word_id < get_vocabulary_size();word_id++){
 			double* vec = get_word_vector(word_id);
-			double f = cstm::inner(vec, target_vec, ndim_d);
+			double f = cstm::inner(vec, target_vec, ndim_d) / (cstm::norm(vec, ndim_d) * cstm::norm(target_vec, ndim_d));
 			pair.first = word_id;
 			pair.second = f;
 			ranking.insert(pair);
 		}
-		python::list result;
 		auto itr = ranking.begin();
 		for(int n = 0;n < std::min(size, ranking.size());n++){
 			python::list tuple;
@@ -863,7 +850,56 @@ public:
 			itr++;
 		}
 		delete[] target_vec;
+	}
+	// 与えられた文書名との類似度が高い文書を返す
+	python::list get_docs_similar_to_file(string filename, size_t size = 10){
+		int doc_id = get_doc_id_by_filename(filename);
+		int ndim_d = _cstm->_ndim_d;
+		double* target_vec = new double[ndim_d];
+		std::memcpy(target_vec, get_doc_vector(doc_id), ndim_d * sizeof(double));
+		python::list result;
+		_get_docs_similar_to_raw_vector(target_vec, size, result);
+		delete[] target_vec;
 		return result;
+	}
+	// 与えられたベクトルとの類似度が高い文書を返す
+	python::list get_docs_similar_to_vector(python::list vector_list, size_t size = 10){
+		int ndim_d = _cstm->_ndim_d;
+		assert(python::len(vector_list) == ndim_d);
+		double* target_vec = new double[ndim_d];
+		for(int i = 0;i < ndim_d;i++){
+			target_vec[i] = python::extract<double>(vector_list[i]);
+		}
+		python::list result;
+		_get_docs_similar_to_raw_vector(target_vec, size, result);
+		delete[] target_vec;
+		return result;
+	}
+	void _get_docs_similar_to_raw_vector(double* target_vec, size_t size, python::list &result){
+		int ndim_d = _cstm->_ndim_d;
+		std::pair<int, double> pair;
+		multiset<std::pair<int, double>, multiset_comparator<double>> ranking;
+		for(int doc_id = 0;doc_id < get_num_documents();doc_id++){
+			double* vec = get_doc_vector(doc_id);
+			double f = cstm::inner(vec, target_vec, ndim_d) / (cstm::norm(vec, ndim_d) * cstm::norm(target_vec, ndim_d));
+			pair.first = doc_id;
+			pair.second = f;
+			ranking.insert(pair);
+		}
+		auto itr = ranking.begin();
+		for(int n = 0;n < std::min(size, ranking.size());n++){
+			python::list tuple;
+			int doc_id = itr->first;
+			double f = itr->second;
+			string filename = get_doc_filename_by_id(doc_id);
+			double* vector = get_doc_vector(doc_id);
+			tuple.append(doc_id);
+			tuple.append(filename);
+			tuple.append(_convert_vector_to_list(vector));
+			tuple.append(f);
+			result.append(tuple);
+			itr++;
+		}
 	}
 };
 
@@ -914,8 +950,11 @@ BOOST_PYTHON_MODULE(model){
 	.def("get_sum_word_frequency", &PyCSTM::get_sum_word_frequency)
 	.def("get_alpha0", &PyCSTM::get_alpha0)
 	.def("get_doc_id_by_filename", &PyCSTM::get_doc_id_by_filename)
+	.def("get_doc_filename_by_id", &PyCSTM::get_doc_filename_by_id)
 	.def("get_doc_filenames", &PyCSTM::get_doc_filenames)
 	.def("get_words_similar_to_word", &PyCSTM::get_words_similar_to_word)
 	.def("get_words_similar_to_vector", &PyCSTM::get_words_similar_to_vector)
+	.def("get_docs_similar_to_file", &PyCSTM::get_docs_similar_to_file)
+	.def("get_docs_similar_to_vector", &PyCSTM::get_docs_similar_to_vector)
 	.def("load", &PyCSTM::load);
 }

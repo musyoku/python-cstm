@@ -11,13 +11,13 @@ def find_similar_words(args):
 
 	# 単語情報を取得
 	words = cstm.get_words_similar_to_word(u"apple", 20)
-	print "word_id	word		count	inner"
+	print "word_id	word		count	cosine"
 	for meta in words:
 		# 単語ID、単語、総出現回数、単語ベクトル、内積
-		word_id, word, count, vector, inner = meta
+		word_id, word, count, vector, cosine = meta
 		vector = np.asarray(vector, dtype=np.float32)
 		word = word.encode(sys.stdout.encoding) + " " * max(0, 8 - len(word))
-		print "{}	{}	{}	{}".format(word_id, word, count, inner)
+		print "{}	{}	{}	{}".format(word_id, word, count, cosine)
 
 def get_analogies(args):
 	assert os.path.exists(args.model_filename)
@@ -31,13 +31,13 @@ def get_analogies(args):
 
 	# 単語情報を取得
 	words = cstm.get_words_similar_to_vector(queen, 20)
-	print "word_id	word		count	inner"
+	print "word_id	word		count	cosine"
 	for meta in words:
 		# 単語ID、単語、総出現回数、単語ベクトル、内積
-		word_id, word, count, vector, inner = meta
+		word_id, word, count, vector, cosine = meta
 		vector = np.asarray(vector, dtype=np.float32)
 		word = word.encode(sys.stdout.encoding) + " " * max(0, 8 - len(word))
-		print "{}	{}	{}	{}".format(word_id, word, count, inner)
+		print "{}	{}	{}	{}".format(word_id, word, count, cosine)
 
 if __name__ == "__main__":
 	parser = argparse.ArgumentParser()

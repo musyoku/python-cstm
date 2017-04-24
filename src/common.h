@@ -1,5 +1,6 @@
 #pragma once
 #include "fmath.h"
+#include "fastapprox/fastgamma.h"
 
 #define NDIM_D 			2		// 文書・単語ベクトルの次元数
 #define SIGMA_U 		0.01	// 文書ベクトルのランダムウォーク幅
@@ -13,6 +14,17 @@ namespace cstm{
 	double exp(double x){
 		// return fmath::expd(x);	// intelのコンパイラがない場合はこっちを使うと若干早くなるかもしれない
 		return std::exp(x);
+	}
+	double lgamma(double x){
+		return fastlgamma(x);
+		// return std::lgamma(x);
+	}
+	double norm(double* a, int length){
+		double norm = 0;
+		for(int i = 0;i < length;i++){
+			norm += a[i] * a[i];
+		}
+		return sqrt(norm);
 	}
 	double inner(double* a, double* b, int length){
 		double inner = 0;
