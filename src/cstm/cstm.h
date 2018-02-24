@@ -3,7 +3,8 @@
 #include <boost/serialization/base_object.hpp>
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
-#include <boost/serialization/split_free.hpp>
+// #include <boost/serialization/split_free.hpp>
+#include <boost/serialization/split_member.hpp>
 #include <unordered_set>
 #include <cassert>
 #include <cmath>
@@ -15,7 +16,13 @@
 
 namespace cstm{
 	class CSTM{
-		public:
+	private:
+		friend class boost::serialization::access;
+		template <class Archive>
+		void serialize(Archive &archive, unsigned int version);
+		void save(boost::archive::binary_oarchive &archive, unsigned int version) const;
+		void load(boost::archive::binary_iarchive &archive, unsigned int version);
+	public:
 		int** _n_k;					// 文書ごとの単語の出現頻度
 		int* _sum_n_k;				// 文書ごとの単語の出現頻度の総和
 		int* _word_count;
@@ -91,16 +98,14 @@ namespace cstm{
 		void set_doc_vector(int doc_id, double* source);
 		void update_Zi(int doc_id);
 		void set_Zi(int doc_id, double new_value);
-		template <class Archive>
-		void serialize(Archive &archive, unsigned int version);
-		void save(std::string filename);
-		bool load(std::string filename);
+		// void save(std::string filename);
+		// bool load(std::string filename);
 	};
 }
 // モデルの保存用
-namespace boost { namespace serialization {
-template<class Archive>
-	void save(Archive &archive, const cstm::CSTM &cstm, unsigned int version);
-template<class Archive>
-	void load(Archive &archive, cstm::CSTM &cstm, unsigned int version);
-}}
+// namespace boost { namespace serialization {
+// template<class Archive>
+// 	void save(Archive &archive, const cstm::CSTM &cstm, unsigned int version);
+// template<class Archive>
+// 	void load(Archive &archive, cstm::CSTM &cstm, unsigned int version);
+// }}

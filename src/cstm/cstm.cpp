@@ -407,150 +407,279 @@ namespace cstm{
 		assert(new_value > 0);
 		_Zi[doc_id] = new_value;
 	}
+	// template <class Archive>
+	// void CSTM::serialize(Archive &archive, unsigned int version)
+	// {
+	// 	boost::serialization::split_free(archive, *this, version);
+	// }
+	// void CSTM::save(std::string filename){
+	// 	std::ofstream ofs(filename);
+	// 	boost::archive::binary_oarchive oarchive(ofs);
+	// 	oarchive << *this;
+	// }
+	// bool CSTM::load(std::string filename){
+	// 	std::ifstream ifs(filename);
+	// 	if(ifs.good()){
+	// 		boost::archive::binary_iarchive iarchive(ifs);
+	// 		iarchive >> *this;
+	// 		return true;
+	// 	}
+	// 	return false;
+	// }
 	template <class Archive>
 	void CSTM::serialize(Archive &archive, unsigned int version)
 	{
-		boost::serialization::split_free(archive, *this, version);
+		boost::serialization::split_member(archive, *this, version);
 	}
-	void CSTM::save(std::string filename){
-		std::ofstream ofs(filename);
-		boost::archive::binary_oarchive oarchive(ofs);
-		oarchive << *this;
-	}
-	bool CSTM::load(std::string filename){
-		std::ifstream ifs(filename);
-		if(ifs.good()){
-			boost::archive::binary_iarchive iarchive(ifs);
-			iarchive >> *this;
-			return true;
+	template void CSTM::serialize(boost::archive::binary_iarchive &ar, unsigned int version);
+	template void CSTM::serialize(boost::archive::binary_oarchive &ar, unsigned int version);
+	void CSTM::save(boost::archive::binary_oarchive &archive, unsigned int version) const {
+		archive & _ndim_d;
+		archive & _num_documents;
+		archive & _vocabulary_size;
+		archive & _sum_word_frequency;
+		archive & _sigma_u;
+		archive & _sigma_phi;
+		archive & _sigma_alpha0;
+		archive & _alpha0;
+		archive & _is_initialized;
+		archive & _is_compiled;
+		if(_is_initialized){
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				archive & _Zi[doc_id];
+				archive & _sum_n_k[doc_id];
+				archive & _log_likelihood_first_term[doc_id];
+			}
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+					archive & _n_k[doc_id][word_id];
+				}
+			}
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				double* vec = _doc_vectors[doc_id];
+				for(int i = 0;i < _ndim_d;i++){
+					archive & vec[i];
+				}
+			}
+			for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+				double* vec = _word_vectors[word_id];
+				for(int i = 0;i < _ndim_d;i++){
+					archive & vec[i];
+				}
+			}
+			for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+				archive & _word_count[word_id];
+			}
 		}
-		return false;
+		if(_is_compiled){
+			for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+				archive & _g0[word_id];
+			}
+		}
+	}
+	void CSTM::load(boost::archive::binary_iarchive &archive, unsigned int version) {
+		archive & _ndim_d;
+		archive & _num_documents;
+		archive & _vocabulary_size;
+		archive & _sum_word_frequency;
+		archive & _sigma_u;
+		archive & _sigma_phi;
+		archive & _sigma_alpha0;
+		archive & _alpha0;
+		archive & _is_initialized;
+		archive & _is_compiled;
+		if(_is_initialized){
+			if(_word_vectors == NULL){
+				_word_vectors = new double*[_vocabulary_size];
+				for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+					_word_vectors[word_id] = new double[_ndim_d];
+				}
+			}
+			if(_doc_vectors == NULL){
+				_doc_vectors = new double*[_num_documents];
+				for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+					_doc_vectors[doc_id] = new double[_ndim_d];
+				}
+			}
+			if(_n_k == NULL){
+				_n_k = new int*[_num_documents];
+				for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+					_n_k[doc_id] = new int[_vocabulary_size];
+				}
+			}
+			if(_sum_n_k == NULL){
+				_sum_n_k = new int[_num_documents];
+			}
+			if(_Zi == NULL){
+				_Zi = new double[_num_documents];
+			}
+			if(_log_likelihood_first_term == NULL){
+				_log_likelihood_first_term = new double[_num_documents];
+			}
+			if(_word_count == NULL){
+				_word_count = new int[_vocabulary_size];
+			}
+
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				archive & _Zi[doc_id];
+				archive & _sum_n_k[doc_id];
+				archive & _log_likelihood_first_term[doc_id];
+			}
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+					archive & _n_k[doc_id][word_id];
+				}
+			}
+			for(int doc_id = 0;doc_id < _num_documents;doc_id++){
+				double* vec = _doc_vectors[doc_id];
+				for(int i = 0;i < _ndim_d;i++){
+					archive & vec[i];
+				}
+			}
+			for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+				double* vec = _word_vectors[word_id];
+				for(int i = 0;i < _ndim_d;i++){
+					archive & vec[i];
+				}
+			}
+			for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+				archive & _word_count[word_id];
+			}
+		}
+		if(_is_compiled){
+			if(_g0 == NULL){
+				_g0 = new double[_vocabulary_size];
+			}
+			for(id word_id = 0;word_id < _vocabulary_size;word_id++){
+				archive & _g0[word_id];
+			}
+		}
 	}
 }
 // モデルの保存用
-namespace boost { namespace serialization {
-template<class Archive>
-	void save(Archive &archive, const cstm::CSTM &cstm, unsigned int version) {
-		archive & cstm._ndim_d;
-		archive & cstm._num_documents;
-		archive & cstm._vocabulary_size;
-		archive & cstm._sum_word_frequency;
-		archive & cstm._sigma_u;
-		archive & cstm._sigma_phi;
-		archive & cstm._sigma_alpha0;
-		archive & cstm._alpha0;
-		archive & cstm._is_initialized;
-		archive & cstm._is_compiled;
-		if(cstm._is_initialized){
-			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-				archive & cstm._Zi[doc_id];
-				archive & cstm._sum_n_k[doc_id];
-				archive & cstm._log_likelihood_first_term[doc_id];
-			}
-			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-				for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-					archive & cstm._n_k[doc_id][word_id];
-				}
-			}
-			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-				double* vec = cstm._doc_vectors[doc_id];
-				for(int i = 0;i < cstm._ndim_d;i++){
-					archive & vec[i];
-				}
-			}
-			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-				double* vec = cstm._word_vectors[word_id];
-				for(int i = 0;i < cstm._ndim_d;i++){
-					archive & vec[i];
-				}
-			}
-			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-				archive & cstm._word_count[word_id];
-			}
-		}
-		if(cstm._is_compiled){
-			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-				archive & cstm._g0[word_id];
-			}
-		}
-	}
-template<class Archive>
-	void load(Archive &archive, cstm::CSTM &cstm, unsigned int version) {
-		archive & cstm._ndim_d;
-		archive & cstm._num_documents;
-		archive & cstm._vocabulary_size;
-		archive & cstm._sum_word_frequency;
-		archive & cstm._sigma_u;
-		archive & cstm._sigma_phi;
-		archive & cstm._sigma_alpha0;
-		archive & cstm._alpha0;
-		archive & cstm._is_initialized;
-		archive & cstm._is_compiled;
-		if(cstm._is_initialized){
-			if(cstm._word_vectors == NULL){
-				cstm._word_vectors = new double*[cstm._vocabulary_size];
-				for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-					cstm._word_vectors[word_id] = new double[cstm._ndim_d];
-				}
-			}
-			if(cstm._doc_vectors == NULL){
-				cstm._doc_vectors = new double*[cstm._num_documents];
-				for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-					cstm._doc_vectors[doc_id] = new double[cstm._ndim_d];
-				}
-			}
-			if(cstm._n_k == NULL){
-				cstm._n_k = new int*[cstm._num_documents];
-				for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-					cstm._n_k[doc_id] = new int[cstm._vocabulary_size];
-				}
-			}
-			if(cstm._sum_n_k == NULL){
-				cstm._sum_n_k = new int[cstm._num_documents];
-			}
-			if(cstm._Zi == NULL){
-				cstm._Zi = new double[cstm._num_documents];
-			}
-			if(cstm._log_likelihood_first_term == NULL){
-				cstm._log_likelihood_first_term = new double[cstm._num_documents];
-			}
-			if(cstm._word_count == NULL){
-				cstm._word_count = new int[cstm._vocabulary_size];
-			}
+// namespace boost { namespace serialization {
+// template<class Archive>
+// 	void save(Archive &archive, const cstm::CSTM &cstm, unsigned int version) {
+// 		archive & cstm._ndim_d;
+// 		archive & cstm._num_documents;
+// 		archive & cstm._vocabulary_size;
+// 		archive & cstm._sum_word_frequency;
+// 		archive & cstm._sigma_u;
+// 		archive & cstm._sigma_phi;
+// 		archive & cstm._sigma_alpha0;
+// 		archive & cstm._alpha0;
+// 		archive & cstm._is_initialized;
+// 		archive & cstm._is_compiled;
+// 		if(cstm._is_initialized){
+// 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 				archive & cstm._Zi[doc_id];
+// 				archive & cstm._sum_n_k[doc_id];
+// 				archive & cstm._log_likelihood_first_term[doc_id];
+// 			}
+// 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 				for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 					archive & cstm._n_k[doc_id][word_id];
+// 				}
+// 			}
+// 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 				double* vec = cstm._doc_vectors[doc_id];
+// 				for(int i = 0;i < cstm._ndim_d;i++){
+// 					archive & vec[i];
+// 				}
+// 			}
+// 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 				double* vec = cstm._word_vectors[word_id];
+// 				for(int i = 0;i < cstm._ndim_d;i++){
+// 					archive & vec[i];
+// 				}
+// 			}
+// 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 				archive & cstm._word_count[word_id];
+// 			}
+// 		}
+// 		if(cstm._is_compiled){
+// 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 				archive & cstm._g0[word_id];
+// 			}
+// 		}
+// 	}
+// template<class Archive>
+// 	void load(Archive &archive, cstm::CSTM &cstm, unsigned int version) {
+// 		archive & cstm._ndim_d;
+// 		archive & cstm._num_documents;
+// 		archive & cstm._vocabulary_size;
+// 		archive & cstm._sum_word_frequency;
+// 		archive & cstm._sigma_u;
+// 		archive & cstm._sigma_phi;
+// 		archive & cstm._sigma_alpha0;
+// 		archive & cstm._alpha0;
+// 		archive & cstm._is_initialized;
+// 		archive & cstm._is_compiled;
+// 		if(cstm._is_initialized){
+// 			if(cstm._word_vectors == NULL){
+// 				cstm._word_vectors = new double*[cstm._vocabulary_size];
+// 				for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 					cstm._word_vectors[word_id] = new double[cstm._ndim_d];
+// 				}
+// 			}
+// 			if(cstm._doc_vectors == NULL){
+// 				cstm._doc_vectors = new double*[cstm._num_documents];
+// 				for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 					cstm._doc_vectors[doc_id] = new double[cstm._ndim_d];
+// 				}
+// 			}
+// 			if(cstm._n_k == NULL){
+// 				cstm._n_k = new int*[cstm._num_documents];
+// 				for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 					cstm._n_k[doc_id] = new int[cstm._vocabulary_size];
+// 				}
+// 			}
+// 			if(cstm._sum_n_k == NULL){
+// 				cstm._sum_n_k = new int[cstm._num_documents];
+// 			}
+// 			if(cstm._Zi == NULL){
+// 				cstm._Zi = new double[cstm._num_documents];
+// 			}
+// 			if(cstm._log_likelihood_first_term == NULL){
+// 				cstm._log_likelihood_first_term = new double[cstm._num_documents];
+// 			}
+// 			if(cstm._word_count == NULL){
+// 				cstm._word_count = new int[cstm._vocabulary_size];
+// 			}
 
-			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-				archive & cstm._Zi[doc_id];
-				archive & cstm._sum_n_k[doc_id];
-				archive & cstm._log_likelihood_first_term[doc_id];
-			}
-			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-				for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-					archive & cstm._n_k[doc_id][word_id];
-				}
-			}
-			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
-				double* vec = cstm._doc_vectors[doc_id];
-				for(int i = 0;i < cstm._ndim_d;i++){
-					archive & vec[i];
-				}
-			}
-			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-				double* vec = cstm._word_vectors[word_id];
-				for(int i = 0;i < cstm._ndim_d;i++){
-					archive & vec[i];
-				}
-			}
-			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-				archive & cstm._word_count[word_id];
-			}
-		}
-		if(cstm._is_compiled){
-			if(cstm._g0 == NULL){
-				cstm._g0 = new double[cstm._vocabulary_size];
-			}
-			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
-				archive & cstm._g0[word_id];
-			}
-		}
-	}
-}} // namespace boost::serialization
+// 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 				archive & cstm._Zi[doc_id];
+// 				archive & cstm._sum_n_k[doc_id];
+// 				archive & cstm._log_likelihood_first_term[doc_id];
+// 			}
+// 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 				for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 					archive & cstm._n_k[doc_id][word_id];
+// 				}
+// 			}
+// 			for(int doc_id = 0;doc_id < cstm._num_documents;doc_id++){
+// 				double* vec = cstm._doc_vectors[doc_id];
+// 				for(int i = 0;i < cstm._ndim_d;i++){
+// 					archive & vec[i];
+// 				}
+// 			}
+// 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 				double* vec = cstm._word_vectors[word_id];
+// 				for(int i = 0;i < cstm._ndim_d;i++){
+// 					archive & vec[i];
+// 				}
+// 			}
+// 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 				archive & cstm._word_count[word_id];
+// 			}
+// 		}
+// 		if(cstm._is_compiled){
+// 			if(cstm._g0 == NULL){
+// 				cstm._g0 = new double[cstm._vocabulary_size];
+// 			}
+// 			for(id word_id = 0;word_id < cstm._vocabulary_size;word_id++){
+// 				archive & cstm._g0[word_id];
+// 			}
+// 		}
+// 	}
+// }} // namespace boost::serialization
