@@ -30,7 +30,7 @@ namespace cstm{
 			uniform_real_distribution<double> rand(min, max);
 			return rand(mt);
 		}
-		static double uniform_int(int min = 0, int max = 0){
+		int uniform_int(int min = 0, int max = 0){
 			uniform_int_distribution<> rand(min, max);
 			return rand(mt);
 		}

@@ -1,5 +1,4 @@
 #pragma once
-#include "fmath.h"
 
 #define NDIM_D 			2		// 文書・単語ベクトルの次元数
 #define SIGMA_U 		0.01	// 文書ベクトルのランダムウォーク幅
@@ -11,7 +10,6 @@ using id = size_t;
 
 namespace cstm{
 	double exp(double x){
-		// return fmath::expd(x);	// intelのコンパイラがない場合はこっちを使うと若干早くなるかもしれない
 		return std::exp(x);
 	}
 	double norm(double* a, int length){
