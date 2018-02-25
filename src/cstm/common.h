@@ -7,7 +7,9 @@
 #define SIGMA_ALPHA 	0.2		// a0のランダムウォーク幅
 #define GAMMA_ALPHA_A 	5		// a0のガンマ事前分布のハイパーパラメータ
 #define GAMMA_ALPHA_B 	1		// a0のガンマ事前分布のハイパーパラメータ
+
 using id = size_t;
+#define SPECIAL_WORD_UNK 0
 
 namespace cstm {
 	double exp(double x);

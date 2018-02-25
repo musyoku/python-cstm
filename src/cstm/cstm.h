@@ -47,13 +47,10 @@ namespace cstm{
 		std::normal_distribution<double> _noise_word;
 		std::normal_distribution<double> _noise_doc;
 		std::normal_distribution<double> _noise_alpha0;
-		bool _is_initialized;
-		bool _is_compiled;
-		CSTM();
+		CSTM(int ndim_d, int vocabulary_size, int num_documents);
 		~CSTM();
-		void _init_cache(int ndim_d, int vocabulary_size, int num_documents);
-		void _delete_cache();
-		void compile();
+		void _allocate_capacity(int ndim_d, int vocabulary_size, int num_documents);
+		void _delete_capacity();
 		void add_word(id word_id, int doc_id);
 		double generate_noise_from_standard_normal_distribution();
 		double generate_noise_doc();
