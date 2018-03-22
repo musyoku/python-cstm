@@ -47,7 +47,14 @@ namespace cstm{
 		std::normal_distribution<double> _noise_word;
 		std::normal_distribution<double> _noise_doc;
 		std::normal_distribution<double> _noise_alpha0;
-		CSTM(int ndim_d, int vocabulary_size, int num_documents);
+		CSTM(int ndim_d, 
+			 int vocabulary_size, 
+			 int num_documents,
+			 int sigma_u,
+			 int sigma_phi,
+			 int sigma_alpha0,
+			 int gamma_alpha_a,
+			 int gamma_alpha_b);
 		~CSTM();
 		void _allocate_capacity(int ndim_d, int vocabulary_size, int num_documents);
 		void _delete_capacity();

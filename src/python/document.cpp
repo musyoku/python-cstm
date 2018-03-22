@@ -8,6 +8,7 @@ namespace cstm {
 				id word_id = dictionary->add_word(word);
 				sentence.push_back(word_id);
 			}
+			_sentences.push_back(sentence);
 		}
 	}
 }

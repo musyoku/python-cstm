@@ -1,13 +1,21 @@
 #include "cstm.h"
 
 namespace cstm{
-	CSTM::CSTM(int ndim_d, int vocabulary_size, int num_documents){
-		_ndim_d = NDIM_D;
-		_sigma_u = SIGMA_U;
-		_sigma_phi = SIGMA_PHI;
-		_sigma_alpha0 = SIGMA_ALPHA;
-		_gamma_alpha_a = GAMMA_ALPHA_A;
-		_gamma_alpha_b = GAMMA_ALPHA_B;
+	CSTM::CSTM(int ndim_d, 
+			   int vocabulary_size, 
+			   int num_documents,
+			   int sigma_u,
+			   int sigma_phi,
+			   int sigma_alpha0,
+			   int gamma_alpha_a,
+			   int gamma_alpha_b)
+	{
+		_ndim_d = ndim_d;
+		_sigma_u = sigma_u;
+		_sigma_phi = sigma_phi;
+		_sigma_alpha0 = sigma_alpha0;
+		_gamma_alpha_a = gamma_alpha_a;
+		_gamma_alpha_b = gamma_alpha_b;
 		_g0 = NULL;
 		_word_vectors = NULL;
 		_doc_vectors = NULL;
@@ -17,12 +25,11 @@ namespace cstm{
 		_Zi = NULL;
 		_log_likelihood_first_term = NULL;
 		_tmp_vec = NULL;
-		_vocabulary_size = 0;
-		_num_documents = 0;
+		_vocabulary_size = vocabulary_size;
+		_num_documents = num_documents;
 		_sum_word_frequency = 0;
 		_ignore_word_count = 0;
 		_standard_normal_distribution = std::normal_distribution<double>(0, 1);
-
 
 
 		assert(_num_documents > 0);
